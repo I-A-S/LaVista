@@ -66,7 +66,7 @@ namespace LaVista
 
     auto wrap_titlebar_html_body(const String &html) -> String
     {
-      if (looks_like_full_html_document(StringView(html)))
+      if (looks_like_full_html_document(StringView(html.c_str())))
       {
         return html.clone();
       }
