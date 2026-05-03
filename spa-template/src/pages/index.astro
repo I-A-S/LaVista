@@ -1,0 +1,67 @@
+---
+import "../styles/global.css";
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout>
+	<div class="relative h-full overflow-hidden">
+		<div class="lavista-bg-orb lavista-bg-orb-a" aria-hidden="true"></div>
+		<div class="lavista-bg-orb lavista-bg-orb-b" aria-hidden="true"></div>
+		<div class="lavista-bg-noise" aria-hidden="true"></div>
+		<div class="flex h-full items-center justify-center p-6">
+			<main class="lavista-hero-card">
+				<div class="lavista-logo-wrap">
+					<img
+						src="/logo-mark.png"
+						alt="LaVista logo"
+						class="w-20 md:w-24"
+						draggable="false"
+					/>
+				</div>
+				<h1 class="lavista-brand">LaVista</h1>
+				<p class="lavista-tagline">
+					A <span class="font-semibold text-slate-100">modern</span> platform for
+					<span class="font-semibold text-slate-100">C++ desktop</span> applications.
+				</p>
+				<a href="https://github.com/I-A-S/LaVista" class="lavista-cta"
+					>Get Started</a
+				>
+			</main>
+		</div>
+	</div>
+	<script>
+		(() => {
+			const key = "lavista-demo-theme";
+			const valid = new Set(["glass", "neon", "minimal"]);
+			const params = new URLSearchParams(window.location.search);
+			const fromQuery = params.get("theme");
+			const fromStore = localStorage.getItem(key);
+			const initial = "neon";
+			let currentTheme = initial;
+
+			function applyTheme() {
+				document.body.dataset.theme = currentTheme;
+				localStorage.setItem(key, currentTheme);
+				document.querySelectorAll(".lavista-theme-btn").forEach((btn) => {
+					if (!(btn instanceof HTMLButtonElement)) return;
+					btn.setAttribute(
+						"aria-pressed",
+						btn.dataset.themeChoice === currentTheme ? "true" : "false",
+					);
+				});
+			}
+
+			applyTheme();
+			document.querySelectorAll(".lavista-theme-btn").forEach((btn) => {
+				if (!(btn instanceof HTMLButtonElement)) return;
+				btn.addEventListener("click", () => {
+					const choice = btn.dataset.themeChoice;
+					if (choice && valid.has(choice)) {
+						currentTheme = choice;
+						applyTheme();
+					}
+				});
+			});
+		})();
+	</script>
+</Layout>

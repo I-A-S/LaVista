@@ -18,7 +18,7 @@
 #include <algorithm>
 #include <windows.h>
 
-namespace LaVista::detail
+namespace LaVista::_internal
 {
   namespace
   {
@@ -49,7 +49,7 @@ namespace LaVista::detail
       Vec<Win32MonitorRaw> raw;
       if (EnumDisplayMonitors(nullptr, nullptr, win32_monitor_enum_proc, reinterpret_cast<LPARAM>(&raw)) == 0)
       {
-        return au::fail("EnumDisplayMonitors() failed");
+        return fail("EnumDisplayMonitors() failed");
       }
       std::sort(raw.begin(), raw.end(), [](const Win32MonitorRaw &a, const Win32MonitorRaw &b) {
         if (a.primary != b.primary)
@@ -83,4 +83,4 @@ namespace LaVista::detail
   {
     return win32_collect_displays();
   }
-} // namespace LaVista::detail
+} // namespace LaVista::_internal

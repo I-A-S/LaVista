@@ -17,11 +17,11 @@
 
 #include <LaVista_internal.hpp>
 
-namespace LaVista::detail
+namespace LaVista::_internal
 {
   inline constexpr wchar_t SPA_VIRTUAL_HOST_NAME_W[] = L"lavista.bundle.invalid";
   inline constexpr char SPA_VIRTUAL_HOST_NAME[] = "lavista.bundle.invalid";
 
   auto apply_webview2_default_background(webview_t w) -> void;
-  auto map_webview2_spa_virtual_host(webview_t w, const std::filesystem::path &bundle_dir_abs) -> Result<void>;
-} // namespace LaVista::detail
+  auto map_webview2_spa_virtual_host(webview_t w, const filesystem::Path &bundle_dir_abs) -> Result<void>;
+} // namespace LaVista::_internal

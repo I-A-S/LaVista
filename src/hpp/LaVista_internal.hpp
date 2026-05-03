@@ -18,6 +18,7 @@
 #include <LaVista/LaVista.hpp>
 
 #include <auxid/containers/hash_map.hpp>
+#include <auxid/memory/box.hpp>
 
 #define WEBVIEW_HEADER
 #include <webview/webview.h>
@@ -25,12 +26,23 @@
 
 #include <LaVista_platform_context.hpp>
 
-#include <filesystem>
-#include <functional>
-#include <memory>
-
 namespace LaVista
 {
+  namespace _internal
+  {
+    struct DragBindCtx
+    {
+      Window window = nullptr;
+      webview_t sender = nullptr;
+    };
+
+    struct ChromeBindCtx
+    {
+      Window window = nullptr;
+      webview_t sender = nullptr;
+    };
+  } // namespace _internal
+
   struct BindingContext_T
   {
     Window window = nullptr;
@@ -46,14 +58,23 @@ namespace LaVista
     i32 x = -1;
     i32 y = -1;
     WindowDragStripOptions drag_strip{};
-    bool drag_strip_js_installed = false;
+    WindowDragStripOptions drag_strip_backup{};
+    bool drag_strip_backup_valid = false;
+    bool content_drag_strip_js_installed = false;
+    bool titlebar_drag_strip_js_installed = false;
+    webview_t titlebar_webview = nullptr;
+    i32 titlebar_height_px = 0;
+    String titlebar_html{};
     bool running = true;
-    HashMap<String, std::function<void(const String &)>> callbacks;
-    HashMap<String, std::unique_ptr<BindingContext_T>> binding_contexts;
+    HashMap<String, Function<void, const String &>> callbacks;
+    HashMap<String, memory::Box<BindingContext_T>> binding_contexts;
+    memory::Box<_internal::DragBindCtx> content_drag_bind_ctx{nullptr};
+    memory::Box<_internal::DragBindCtx> titlebar_drag_bind_ctx{nullptr};
+    memory::Box<_internal::ChromeBindCtx> chrome_bind_ctx{nullptr};
     PlatformWindowContext platform{};
   };
 
-  namespace detail
+  namespace _internal
   {
     inline auto webview_error_to_result(webview_error_t err, const char *context) -> Result<void>
     {
@@ -61,30 +82,53 @@ namespace LaVista
       {
         return {};
       }
-      return au::fail("%s failed with webview error code %d", context, static_cast<int>(err));
+      return fail("%s failed with webview error code %d", context, static_cast<int>(err));
     }
 
     auto platform_get_displays() -> Result<Vec<DisplayInfo>>;
 
-    auto platform_create_window(Window_T &state, i32 width, i32 height, i32 window_x, i32 window_y, const String &title)
-        -> Result<void>;
+    auto platform_create_window(Window_T &state, i32 width, i32 height, i32 window_x, i32 window_y, const String &title,
+                                const String &icon_path) -> Result<void>;
 
     auto platform_apply_post_webview_setup(Window_T &state, i32 width, i32 height) -> Result<void>;
 
-    void platform_destroy_native(Window window);
+    auto platform_destroy_native(Window window) -> void;
 
     /* Returns false when the native window is no longer valid. */
-    bool platform_pump_events(Window window);
+    auto platform_pump_events(Window window) -> bool;
 
-    void platform_sync_window_frame_from_native(Window window);
+    auto platform_sync_window_frame_from_native(Window window) -> void;
 
     auto platform_set_window_position(Window window, i32 x, i32 y) -> Result<void>;
 
     auto platform_set_window_size(Window window, i32 width, i32 height) -> Result<void>;
 
-    void platform_start_window_drag(Window window);
+    auto platform_start_window_drag(Window window) -> void;
 
-    auto load_spa_bundle_into_webview(webview_t w, const std::filesystem::path &index_html,
-                                      const std::filesystem::path &bundle_dir_abs) -> Result<void>;
-  } // namespace detail
+    auto platform_minimize_window(Window window) -> void;
+    auto platform_toggle_maximize_window(Window window) -> void;
+    auto platform_window_is_maximized(Window window) -> bool;
+    auto platform_close_window(Window window) -> void;
+
+    auto platform_create_titlebar_webview(Window window) -> Result<void>;
+    auto platform_destroy_titlebar_webview(Window window) -> Result<void>;
+    auto platform_layout_webviews(Window window) -> void;
+
+    auto load_spa_bundle_into_webview(webview_t w, const filesystem::Path &index_html,
+                                      const filesystem::Path &bundle_dir_abs) -> Result<void>;
+
+    auto load_inline_html_into_webview(webview_t w, String html_document) -> Result<void>;
+
+    auto build_default_titlebar_html(const String &window_title, const String &icon_path) -> Result<String>;
+  } // namespace _internal
+
+  namespace utils
+  {
+    auto load_image_rgba_from_file(const String &path, Vec<u8> &out_rgba, i32 &out_w, i32 &out_h) -> Result<void>;
+
+    auto resize_rgba_nearest(const u8 *src, i32 sw, i32 sh, i32 dw, i32 dh, Vec<u8> &out) -> void;
+
+    auto load_spa_bundle_file_scheme(webview_t w, const filesystem::Path &index_html,
+                                     const filesystem::Path &bundle_dir_abs) -> Result<void>;
+  } // namespace utils
 } // namespace LaVista

@@ -21,7 +21,7 @@
 
 using namespace au;
 
-int main(int agrc, char *argv[])
+auto main(int agrc, char *argv[]) -> int
 {
   struct ThreadInitGuard
   {

@@ -19,8 +19,6 @@
 #include <auxid/containers/vec.hpp>
 #include <auxid/containers/pair.hpp>
 
-#include <functional>
-
 namespace LaVista
 {
   using namespace au;
@@ -40,6 +38,9 @@ namespace LaVista
   {
     String title{"LaVista App"};
     String spa_bundle_path{""};
+    /** Required. Path to a window icon image (PNG, JPEG, or any format supported by stb_image). Decoded once at
+     *  creation via stb_image; cannot be changed afterward. */
+    String icon_path{""};
 
     i32 width{800};
     i32 height{600};
@@ -59,8 +60,12 @@ namespace LaVista
 
   auto get_displays() -> Result<Vec<DisplayInfo>>;
 
-  auto create_window(const WindowCreateOptions &options, const WindowDragStripOptions &drag_strip_options = {})
-      -> Result<Window>;
+  /**
+   * Creates the native window, loads the SPA bundle, and applies LaVista's default host title bar: same chrome as the
+   * hello-lavista example, with `WindowCreateOptions.title` as the label and `icon_path` embedded (base64 data URI) for
+   * the image next to the title. Call `set_window_titlebar` later to replace or clear it.
+   */
+  auto create_window(const WindowCreateOptions &options) -> Result<Window>;
   auto destroy_window(Window window) -> Result<void>;
   auto update_window(Window window) -> bool;
 
@@ -74,7 +79,18 @@ namespace LaVista
 
   auto set_window_drag_strip(Window window, const WindowDragStripOptions &drag_strip_options) -> Result<void>;
 
-  auto bind_window_event(Window window, const String &event, const std::function<void(const String &data)> &callback)
+  /**
+   * Host-managed title bar rendered above the SPA in a separate webview (replacing the default title bar applied by
+   * `create_window`). Pass HTML for a full document, or a body fragment (wrapped automatically). Pass an empty string to
+   * remove the title bar; window chrome bindings move back to the content webview.
+   *
+   * Drag-to-move for the title-bar band is enabled only when `html` is non-empty and `height_px` > 0 (strip height is
+   * `height_px` within the band). If `height_px` is 0 with non-empty `html`, the band still reserves space but dragging
+   * is off.
+   */
+  auto set_window_titlebar(Window window, const String &html, i32 height_px = 40) -> Result<void>;
+
+  auto bind_window_event(Window window, const String &event, const Function<void, const String &> &callback)
       -> Result<void>;
   auto unbind_window_event(Window window, const String &event) -> Result<void>;
 } // namespace LaVista

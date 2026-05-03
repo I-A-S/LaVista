@@ -22,5 +22,7 @@ namespace LaVista
   struct PlatformWindowContext
   {
     HWND hwnd = nullptr;
+    HICON icon_small = nullptr;
+    HICON icon_big = nullptr;
   };
 } // namespace LaVista

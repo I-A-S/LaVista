@@ -14,13 +14,12 @@
 // limitations under the License.
 
 #include <LaVista_internal.hpp>
-#include <spa_bundle.hpp>
 
-namespace LaVista::detail
+namespace LaVista::_internal
 {
-  auto load_spa_bundle_into_webview(webview_t w, const std::filesystem::path &index_html,
-                                    const std::filesystem::path &bundle_dir_abs) -> Result<void>
+  auto load_spa_bundle_into_webview(webview_t w, const filesystem::Path &index_html,
+                                    const filesystem::Path &bundle_dir_abs) -> Result<void>
   {
-    return load_spa_bundle_file_scheme(w, index_html, bundle_dir_abs);
+    return utils::load_spa_bundle_file_scheme(w, index_html, bundle_dir_abs);
   }
-} // namespace LaVista::detail
+} // namespace LaVista::_internal

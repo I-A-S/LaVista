@@ -17,7 +17,7 @@
 
 #include <LaVista/LaVista.hpp>
 
-namespace LaVista::detail
+namespace LaVista::_internal
 {
   auto ensure_gtk_initialized() -> Result<void>;
-} // namespace LaVista::detail
+} // namespace LaVista::_internal

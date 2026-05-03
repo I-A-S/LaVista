@@ -16,20 +16,20 @@
 #include <LaVista_internal.hpp>
 #include <LaVista_webview2.hpp>
 
-namespace LaVista::detail
+namespace LaVista::_internal
 {
-  auto load_spa_bundle_into_webview(webview_t w, const std::filesystem::path &index_html,
-                                    const std::filesystem::path &bundle_dir_abs) -> Result<void>
+  auto load_spa_bundle_into_webview(webview_t w, const filesystem::Path &index_html,
+                                    const filesystem::Path &bundle_dir_abs) -> Result<void>
   {
     (void) index_html;
     auto map_result = map_webview2_spa_virtual_host(w, bundle_dir_abs);
     if (map_result.is_err())
     {
-      return au::fail(std::move(map_result.unwrap_err()));
+      return fail(std::move(map_result.unwrap_err()));
     }
 
-    const std::string entry_name = index_html.filename().generic_string();
-    const std::string vhost_url = std::string("https://") + SPA_VIRTUAL_HOST_NAME + "/" + entry_name;
+    const String entry_name(index_html.filename().generic_string().c_str());
+    const String vhost_url = String("https://") + SPA_VIRTUAL_HOST_NAME + "/" + entry_name;
     return webview_error_to_result(webview_navigate(w, vhost_url.c_str()), "webview_navigate(spa bundle)");
   }
-} // namespace LaVista::detail
+} // namespace LaVista::_internal

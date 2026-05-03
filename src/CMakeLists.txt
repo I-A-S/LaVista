@@ -1,7 +1,6 @@
 add_library(LaVista STATIC
-    cpp/display_management.cpp
+    cpp/internal.cpp
     cpp/window_management.cpp
-    cpp/spa_bundle.cpp
 )
 
 target_include_directories(LaVista PUBLIC
@@ -34,9 +33,10 @@ endif()
 
 target_link_libraries(LaVista PUBLIC 
     libauxid
+    STB_CMake
 )
 
-target_link_libraries(LaVista PRIVATE 
+target_link_libraries(LaVista PRIVATE
     webview::core_static
     auxid_platform_standard
 )

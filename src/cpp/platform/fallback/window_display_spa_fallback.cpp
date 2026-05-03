@@ -14,13 +14,12 @@
 // limitations under the License.
 
 #include <LaVista_internal.hpp>
-#include <spa_bundle.hpp>
 
-namespace LaVista::detail
+namespace LaVista::_internal
 {
   auto platform_get_displays() -> Result<Vec<DisplayInfo>>
   {
-    return au::fail("get_displays is not available on this platform");
+    return fail("get_displays is not available on this platform");
   }
 
   auto platform_apply_post_webview_setup(Window_T &state, i32 width, i32 height) -> Result<void>
@@ -29,34 +28,35 @@ namespace LaVista::detail
                                    "webview_set_size");
   }
 
-  auto platform_create_window(Window_T &state, i32 width, i32 height, i32 window_x, i32 window_y, const String &title)
-      -> Result<void>
+  auto platform_create_window(Window_T &state, i32 width, i32 height, i32 window_x, i32 window_y, const String &title,
+                              const String &icon_path) -> Result<void>
   {
     (void) width;
     (void) height;
     (void) window_x;
     (void) window_y;
     (void) title;
+    (void) icon_path;
 
     state.webview = webview_create(0, nullptr);
     if (state.webview == nullptr)
     {
-      return au::fail("webview_create() failed");
+      return fail("webview_create() failed");
     }
     return {};
   }
 
-  void platform_destroy_native(Window)
+  auto platform_destroy_native(Window) -> void
   {
   }
 
-  bool platform_pump_events(Window window)
+  auto platform_pump_events(Window window) -> bool
   {
     (void) window;
     return true;
   }
 
-  void platform_sync_window_frame_from_native(Window)
+  auto platform_sync_window_frame_from_native(Window) -> void
   {
   }
 
@@ -71,13 +71,45 @@ namespace LaVista::detail
                                    "webview_set_size");
   }
 
-  void platform_start_window_drag(Window)
+  auto platform_start_window_drag(Window) -> void
   {
   }
 
-  auto load_spa_bundle_into_webview(webview_t w, const std::filesystem::path &index_html,
-                                    const std::filesystem::path &bundle_dir_abs) -> Result<void>
+  auto platform_minimize_window(Window) -> void
   {
-    return load_spa_bundle_file_scheme(w, index_html, bundle_dir_abs);
   }
-} // namespace LaVista::detail
+
+  auto platform_toggle_maximize_window(Window) -> void
+  {
+  }
+
+  auto platform_window_is_maximized(Window) -> bool
+  {
+    return false;
+  }
+
+  auto platform_close_window(Window) -> void
+  {
+  }
+
+  auto platform_create_titlebar_webview(Window) -> Result<void>
+  {
+    return fail("Host-managed title bar is not supported for this platform configuration");
+  }
+
+  auto platform_destroy_titlebar_webview(Window window) -> Result<void>
+  {
+    (void) window;
+    return {};
+  }
+
+  auto platform_layout_webviews(Window) -> void
+  {
+  }
+
+  auto load_spa_bundle_into_webview(webview_t w, const filesystem::Path &index_html,
+                                    const filesystem::Path &bundle_dir_abs) -> Result<void>
+  {
+    return utils::load_spa_bundle_file_scheme(w, index_html, bundle_dir_abs);
+  }
+} // namespace LaVista::_internal

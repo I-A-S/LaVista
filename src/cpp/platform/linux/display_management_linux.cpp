@@ -23,7 +23,7 @@
 #  include <gdk/x11/gdkx.h>
 #endif
 
-namespace LaVista::detail
+namespace LaVista::_internal
 {
   auto ensure_gtk_initialized() -> Result<void>
   {
@@ -32,7 +32,7 @@ namespace LaVista::detail
     {
       if (!gtk_init_check())
       {
-        return au::fail("gtk_init_check() failed");
+        return fail("gtk_init_check() failed");
       }
       initialized = true;
     }
@@ -52,19 +52,19 @@ namespace LaVista::detail
       auto gtk_init_result = ensure_gtk_initialized();
       if (gtk_init_result.is_err())
       {
-        return au::fail(std::move(gtk_init_result.unwrap_err()));
+        return fail(std::move(gtk_init_result.unwrap_err()));
       }
 
       GdkDisplay *const display = gdk_display_get_default();
       if (display == nullptr)
       {
-        return au::fail("gdk_display_get_default() returned null");
+        return fail("gdk_display_get_default() returned null");
       }
 
       GListModel *const monitors = gdk_display_get_monitors(display);
       if (monitors == nullptr)
       {
-        return au::fail("gdk_display_get_monitors() returned null");
+        return fail("gdk_display_get_monitors() returned null");
       }
 
       GdkMonitor *primary_mon = nullptr;
@@ -127,4 +127,4 @@ namespace LaVista::detail
   {
     return linux_collect_displays();
   }
-} // namespace LaVista::detail
+} // namespace LaVista::_internal

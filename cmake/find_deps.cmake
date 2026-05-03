@@ -1,6 +1,14 @@
 include(FetchContent)
 
 FetchContent_Declare(
+  stb
+  GIT_REPOSITORY https://github.com/I-A-S/stb-cmake
+  GIT_TAG main
+  SYSTEM
+)
+FetchContent_MakeAvailable(stb)
+
+FetchContent_Declare(
   webview
   GIT_REPOSITORY https://github.com/webview/webview
   GIT_TAG 0.12.0

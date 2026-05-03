@@ -18,10 +18,15 @@
 struct _GtkWindow;
 typedef struct _GtkWindow GtkWindow;
 
+struct _GtkWidget;
+typedef struct _GtkWidget GtkWidget;
+
 namespace LaVista
 {
   struct PlatformWindowContext
   {
     GtkWindow *gtk_window = nullptr;
+    GtkWidget *content_box = nullptr;
+    GtkWindow *titlebar_placeholder = nullptr;
   };
 } // namespace LaVista
