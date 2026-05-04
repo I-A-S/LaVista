@@ -17,7 +17,6 @@
 
 #include <cctype>
 #include <cstdio>
-#include <cstring>
 
 namespace LaVista
 {
@@ -346,23 +345,23 @@ namespace LaVista
       return fail(std::move(minimize_bind.unwrap_err()));
     }
 
-    auto menu_bind = _internal::webview_error_to_result(
-        webview_bind(
-            sender, "LaVista_Menu",
-            +[](const char *id, const char *req, void *arg) {
-              (void) req;
-              auto *c = static_cast<_internal::ChromeBindCtx *>(arg);
-              if (c != nullptr && c->window != nullptr && c->window->menu_button_callback_bound)
-              {
-                c->window->menu_button_callback();
-              }
-              if (c != nullptr && c->sender != nullptr && id != nullptr)
-              {
-                webview_return(c->sender, id, 0, "null");
-              }
-            },
-            ctx),
-        "webview_bind(LaVista_Menu)");
+    auto menu_bind = _internal::webview_error_to_result(webview_bind(
+                                                            sender, "LaVista_Menu",
+                                                            +[](const char *id, const char *req, void *arg) {
+                                                              (void) req;
+                                                              auto *c = static_cast<_internal::ChromeBindCtx *>(arg);
+                                                              if (c != nullptr && c->window != nullptr &&
+                                                                  c->window->menu_button_callback_bound)
+                                                              {
+                                                                c->window->menu_button_callback();
+                                                              }
+                                                              if (c != nullptr && c->sender != nullptr && id != nullptr)
+                                                              {
+                                                                webview_return(c->sender, id, 0, "null");
+                                                              }
+                                                            },
+                                                            ctx),
+                                                        "webview_bind(LaVista_Menu)");
     if (menu_bind.is_err())
     {
       return fail(std::move(menu_bind.unwrap_err()));
@@ -948,9 +947,9 @@ namespace LaVista
     binding_ctx->window = window;
     binding_ctx->name = name_key;
 
-    auto bind_result =
-        _internal::webview_error_to_result(webview_bind(window->webview, name.c_str(), json_binding_thunk, binding_ctx.get()),
-                                           "webview_bind(window function)");
+    auto bind_result = _internal::webview_error_to_result(
+        webview_bind(window->webview, name.c_str(), json_binding_thunk, binding_ctx.get()),
+        "webview_bind(window function)");
     if (bind_result.is_err())
     {
       window->json_binding_handlers.erase(name_key);
@@ -1010,6 +1009,40 @@ namespace LaVista
 
     window->menu_button_callback_bound = false;
     return {};
+  }
+
+  auto dispatch_window_event(Window window, const String &event_name, const String &detail_json) -> Result<void>
+  {
+    if (window == nullptr)
+    {
+      return fail("Window is null");
+    }
+    if (event_name.empty())
+    {
+      return fail("Event name cannot be empty");
+    }
+
+    const String safe_event_name = json_escape_for_string_literal(StringView(event_name.c_str(), event_name.size()));
+    const String safe_detail_json = detail_json.empty() ? String("null") : detail_json;
+
+    String js;
+    js.reserve(safe_event_name.size() + safe_detail_json.size() + 256);
+    js += "(function(){"
+          "var __lvName=";
+    js += safe_event_name;
+    js += ";var __lvDetail=";
+    js += safe_detail_json;
+    js += ";window.dispatchEvent(new CustomEvent(__lvName,{detail:__lvDetail}));"
+          "})();";
+
+    return _internal::webview_error_to_result(webview_eval(window->webview, js.c_str()),
+                                              "webview_eval(dispatch event)");
+  }
+
+  auto dispatch_window_event_text(Window window, const String &event_name, const String &detail_text) -> Result<void>
+  {
+    const String detail_json = json_escape_for_string_literal(StringView(detail_text.c_str(), detail_text.size()));
+    return dispatch_window_event(window, event_name, detail_json);
   }
 
 } // namespace LaVista

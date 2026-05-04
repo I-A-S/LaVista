@@ -123,4 +123,17 @@ namespace LaVista
    */
   auto bind_window_menu_button(Window window, const Function<void> &callback) -> Result<void>;
   auto unbind_window_menu_button(Window window) -> Result<void>;
+
+  /**
+   * Dispatches a JavaScript `CustomEvent` on the SPA content webview (`window.dispatchEvent(...)`).
+   * `detail_json` must be a complete JSON value (object, array, string, number, bool, or null).
+   */
+  auto dispatch_window_event(Window window, const String &event_name, const String &detail_json = "null")
+      -> Result<void>;
+
+  /**
+   * Convenience helper that dispatches a JavaScript `CustomEvent` with a plain UTF-8 string payload.
+   * The payload is JSON-escaped automatically and becomes `event.detail` on the JavaScript side.
+   */
+  auto dispatch_window_event_text(Window window, const String &event_name, const String &detail_text) -> Result<void>;
 } // namespace LaVista
