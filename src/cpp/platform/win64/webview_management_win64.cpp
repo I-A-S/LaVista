@@ -7,6 +7,10 @@
 // A copy of this license is included in the LICENSE file at the root of this project,
 // and is also available at <https://polyformproject.org/licenses/noncommercial/1.0.0>.
 
+module;
+
+#include <string>
+
 #include <windows.h>
 #include <objbase.h>
 
@@ -16,8 +20,13 @@
 #  endif
 #endif
 
-#include <LaVista_webview2.hpp>
 #include <WebView2.h>
+
+#define WEBVIEW_HEADER
+#include <webview/webview.h>
+#undef WEBVIEW_HEADER
+
+module lavista.internal;
 
 namespace LaVista::_internal
 {
@@ -84,7 +93,8 @@ namespace LaVista::_internal
     core->Release();
     if (FAILED(hr))
     {
-      return fail("SetVirtualHostNameToFolderMapping failed (HRESULT 0x%lX)", static_cast<unsigned long>(hr));
+      return fail("SetVirtualHostNameToFolderMapping failed (HRESULT 0x{:X})",
+                    static_cast<unsigned long>(hr));
     }
     return {};
   }

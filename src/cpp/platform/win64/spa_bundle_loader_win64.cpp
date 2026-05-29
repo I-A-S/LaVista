@@ -7,8 +7,19 @@
 // A copy of this license is included in the LICENSE file at the root of this project,
 // and is also available at <https://polyformproject.org/licenses/noncommercial/1.0.0>.
 
-#include <LaVista_internal.hpp>
-#include <LaVista_webview2.hpp>
+module;
+
+#define WEBVIEW_HEADER
+#include <webview/webview.h>
+#undef WEBVIEW_HEADER
+
+#define WEBVIEW_HEADER
+#include <webview/webview.h>
+#undef WEBVIEW_HEADER
+
+#include <utility>
+
+module lavista.internal;
 
 namespace LaVista::_internal
 {

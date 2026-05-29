@@ -35,6 +35,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 FetchContent_MakeAvailable(webview)
 
+if(TARGET webview_core_static)
+  set_target_properties(webview_core_static PROPERTIES CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON)
+endif()
+
 if(LaVista_BUILD_EXAMPLES)
   FetchContent_Declare(
     IAVis

@@ -7,54 +7,18 @@
 // A copy of this license is included in the LICENSE file at the root of this project,
 // and is also available at <https://polyformproject.org/licenses/noncommercial/1.0.0>.
 
-#pragma once
+module;
 
-#include <auxid/auxid.hpp>
-#include <auxid/containers/option.hpp>
-#include <auxid/containers/vec.hpp>
-#include <auxid/containers/pair.hpp>
+#include <functional>
 
-namespace LaVista
+export module lavista;
+
+export import auxid;
+export import lavista.definitions;
+
+export namespace LaVista
 {
   using namespace au;
-
-  typedef struct Window_T *Window;
-
-  struct DisplayInfo
-  {
-    i32 index{-1};
-    i32 width{-1};
-    i32 height{-1};
-    i32 x{-1};
-    i32 y{-1};
-  };
-
-  struct WindowCreateOptions
-  {
-    String title{"LaVista App"};
-    String spa_bundle_path{""};
-    String icon_path{""};
-
-    i32 width{800};
-    i32 height{600};
-    i32 x{-1};
-    i32 y{-1};
-
-    i32 display_index{-1};
-  };
-
-  struct WindowDragStripOptions
-  {
-    f32 start_x_percentage{0.0f};
-    f32 start_y_percentage{0.0f};
-    f32 end_x_percentage{100.0f};
-    f32 end_y_percentage{5.0f};
-
-    i32 start_x_px{-1};
-    i32 start_y_px{-1};
-    i32 end_x_px{-1};
-    i32 end_y_px{-1};
-  };
 
   /**
    * Native file dialogs (via Native File Dialog). On success, returns a path; if the user cancels, returns an empty
@@ -115,7 +79,7 @@ namespace LaVista
    */
   auto set_window_titlebar(Window window, const String &html, i32 height_px = 40) -> Result<void>;
 
-  auto bind_window_event(Window window, const String &event, const Function<void, const String &> &callback)
+  auto bind_window_event(Window window, const String &event, const std::function<void(const String &)> &callback)
       -> Result<void>;
   auto unbind_window_event(Window window, const String &event) -> Result<void>;
 
@@ -125,7 +89,7 @@ namespace LaVista
    * a complete JSON value (`null`, booleans, numbers, strings, arrays, objects) passed to the Promise on the JS side.
    * Underlying webview/GTK APIs are not exposed. Do not use the same `name` as `bind_window_event`.
    */
-  auto bind_window_function(Window window, const String &name, const Function<String, const String &> &handler)
+  auto bind_window_function(Window window, const String &name, const std::function<String(const String &)> &handler)
       -> Result<void>;
   auto unbind_window_function(Window window, const String &name) -> Result<void>;
 
@@ -133,7 +97,7 @@ namespace LaVista
    * Binds the default titlebar menu button callback.
    * The callback runs when the menu button in LaVista's built-in titlebar is clicked.
    */
-  auto bind_window_menu_button(Window window, const Function<void> &callback) -> Result<void>;
+  auto bind_window_menu_button(Window window, const std::function<void()> &callback) -> Result<void>;
   auto unbind_window_menu_button(Window window) -> Result<void>;
 
   /**
@@ -148,6 +112,7 @@ namespace LaVista
    * The payload is JSON-escaped automatically and becomes `event.detail` on the JavaScript side.
    */
   auto dispatch_window_event_text(Window window, const String &event_name, const String &detail_text) -> Result<void>;
+
   /**
    * Posts binary data to the SPA script environment.
    * On Windows, this uses WebView2's shared buffer.

@@ -7,7 +7,13 @@
 // A copy of this license is included in the LICENSE file at the root of this project,
 // and is also available at <https://polyformproject.org/licenses/noncommercial/1.0.0>.
 
-#include <LaVista_internal.hpp>
+module;
+
+#define WEBVIEW_HEADER
+#include <webview/webview.h>
+#undef WEBVIEW_HEADER
+
+module lavista.internal;
 
 namespace LaVista::_internal
 {
@@ -61,7 +67,7 @@ namespace LaVista::_internal
 
   auto platform_set_window_size(Window window, i32 width, i32 height) -> Result<void>
   {
-    return webview_error_to_result(webview_set_size(window->webview, width, height, WEBVIEW_HINT_NONE),
+    return webview_error_to_result(webview_set_size(window_ptr(window)->webview, width, height, WEBVIEW_HINT_NONE),
                                    "webview_set_size");
   }
 

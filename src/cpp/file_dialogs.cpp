@@ -7,13 +7,18 @@
 // A copy of this license is included in the LICENSE file at the root of this project,
 // and is also available at <https://polyformproject.org/licenses/noncommercial/1.0.0>.
 
-#include <LaVista/LaVista.hpp>
+module;
+
+import lavista.definitions;
 
 #include <cctype>
 #include <cstdlib>
 #include <cstring>
+#include <utility>
 
 #include <nfd.h>
+
+module lavista;
 
 namespace LaVista
 {
@@ -120,7 +125,7 @@ namespace LaVista
     {
       return Option<String>{};
     }
-    return fail("%s", nfd_error_message());
+    return fail("{}", nfd_error_message());
   }
 
   auto open_files_dialog(const Span<const char *const> &filters, const String &default_path)
@@ -157,7 +162,7 @@ namespace LaVista
     {
       return Option<Vec<String>>{};
     }
-    return fail("%s", nfd_error_message());
+    return fail("{}", nfd_error_message());
   }
 
   auto open_folder_dialog(const String &default_path) -> Result<Option<String>>
@@ -180,7 +185,7 @@ namespace LaVista
     {
       return Option<String>{};
     }
-    return fail("%s", nfd_error_message());
+    return fail("{}", nfd_error_message());
   }
 
   auto save_file_dialog(const Span<const char *const> &filters, const String &default_path) -> Result<Option<String>>
@@ -202,7 +207,7 @@ namespace LaVista
     {
       return Option<String>{};
     }
-    return fail("%s", nfd_error_message());
+    return fail("{}", nfd_error_message());
   }
 
 } // namespace LaVista

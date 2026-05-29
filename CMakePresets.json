@@ -61,7 +61,7 @@
     },
     {
       "name": "LaVista-x64-windows",
-      "displayName": "LaVista Windows x64 (Visual Studio 2022)",
+      "displayName": "LaVista Windows x64 (Visual Studio 2026)",
       "inherits": "x64-windows",
       "binaryDir": "${sourceDir}/out/build/${presetName}",
       "cacheVariables": {
@@ -70,7 +70,7 @@
     },
     {
       "name": "LaVista-arm64-windows",
-      "displayName": "LaVista Windows ARM64 (Visual Studio 2022)",
+      "displayName": "LaVista Windows ARM64 (Visual Studio 2026)",
       "inherits": "arm64-windows",
       "binaryDir": "${sourceDir}/out/build/${presetName}",
       "cacheVariables": {

@@ -7,12 +7,13 @@
 // A copy of this license is included in the LICENSE file at the root of this project,
 // and is also available at <https://polyformproject.org/licenses/noncommercial/1.0.0>.
 
-#include <LaVista_internal.hpp>
-#include <LaVista_gtk_webview.hpp>
+module;
 
 #include <algorithm>
 
 #include <gtk/gtk.h>
+
+module lavista.internal;
 #if defined(GDK_WINDOWING_X11)
 #  include <gdk/x11/gdkx.h>
 #endif

@@ -1,13 +1,19 @@
 add_library(LaVista STATIC
     cpp/internal.cpp
+    cpp/internal_internal.cpp
     cpp/window_management.cpp
     cpp/file_dialogs.cpp
 )
 
-target_include_directories(LaVista PUBLIC
-    $<BUILD_INTERFACE:${LaVista_ROOT}/include>
-    $<INSTALL_INTERFACE:include>
+target_sources(LaVista
+    PUBLIC FILE_SET lavista_modules TYPE CXX_MODULES
+        BASE_DIRS "${CMAKE_CURRENT_LIST_DIR}/modules"
+        FILES
+            "${CMAKE_CURRENT_LIST_DIR}/modules/lavista.definitions.cppm"
+            "${CMAKE_CURRENT_LIST_DIR}/modules/lavista.internal.cppm"
+            "${CMAKE_CURRENT_LIST_DIR}/modules/lavista.cppm"
 )
+
 target_include_directories(LaVista PRIVATE hpp)
 
 if(WIN32)
@@ -40,8 +46,9 @@ target_link_libraries(LaVista PUBLIC
 target_link_libraries(LaVista PRIVATE
     NativeFileDialog
     webview::core_static
-    auxid_platform_standard
 )
+
+set_target_properties(LaVista PROPERTIES CXX_SCAN_FOR_MODULES ON)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   find_package(X11 REQUIRED)

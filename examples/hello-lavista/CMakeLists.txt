@@ -8,5 +8,6 @@ endif()
 
 target_link_libraries(HelloLaVista PRIVATE 
   LaVista
-  auxid_platform_standard
 )
+
+set_target_properties(HelloLaVista PROPERTIES CXX_SCAN_FOR_MODULES ON)

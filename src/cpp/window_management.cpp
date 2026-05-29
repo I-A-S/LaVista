@@ -7,10 +7,26 @@
 // A copy of this license is included in the LICENSE file at the root of this project,
 // and is also available at <https://polyformproject.org/licenses/noncommercial/1.0.0>.
 
-#include <LaVista_internal.hpp>
+module;
+
+#include <auxid/macros.hpp>
+
+import lavista.internal;
+import lavista.definitions;
 
 #include <cctype>
 #include <cstdio>
+#include <filesystem>
+#include <functional>
+#include <system_error>
+
+#define WEBVIEW_HEADER
+#include <webview/webview.h>
+#undef WEBVIEW_HEADER
+
+#include <utility>
+
+module lavista;
 
 namespace LaVista
 {
@@ -99,12 +115,12 @@ namespace LaVista
       return;
     }
 
-    auto &callbacks = ctx->window->callbacks;
+    auto &callbacks = window_ptr(ctx->window)->callbacks;
     const auto it = callbacks.find(ctx->event);
     if (it)
       (*it)(String(req == nullptr ? "" : req));
-    if (ctx->window->webview != nullptr && id != nullptr)
-      webview_return(ctx->window->webview, id, 0, "null");
+    if (window_ptr(ctx->window)->webview != nullptr && id != nullptr)
+      webview_return(window_ptr(ctx->window)->webview, id, 0, "null");
   }
 
   static auto json_binding_thunk(const char *id, const char *req, void *arg) -> void
@@ -115,20 +131,20 @@ namespace LaVista
       return;
     }
 
-    auto *handler = ctx->window->json_binding_handlers.find(ctx->name);
+    auto *handler = window_ptr(ctx->window)->json_binding_handlers.find(ctx->name);
     if (handler == nullptr)
     {
-      if (ctx->window->webview != nullptr && id != nullptr)
+      if (window_ptr(ctx->window)->webview != nullptr && id != nullptr)
       {
-        webview_return(ctx->window->webview, id, 0, "null");
+        webview_return(window_ptr(ctx->window)->webview, id, 0, "null");
       }
       return;
     }
 
     const String out = (*handler)(String(req == nullptr ? "" : req));
-    if (ctx->window->webview != nullptr && id != nullptr)
+    if (window_ptr(ctx->window)->webview != nullptr && id != nullptr)
     {
-      webview_return(ctx->window->webview, id, 0, out.c_str());
+      webview_return(window_ptr(ctx->window)->webview, id, 0, out.c_str());
     }
   }
 
@@ -159,7 +175,7 @@ namespace LaVista
   }
 
   static auto configure_movable_drag_strip(Window window, webview_t target, const WindowDragStripOptions &opts,
-                                           bool *installed_flag, memory::Box<_internal::DragBindCtx> &ctx_storage)
+                                           bool *installed_flag, Box<_internal::DragBindCtx> &ctx_storage)
       -> Result<void>
   {
     if (window == nullptr || target == nullptr)
@@ -168,7 +184,7 @@ namespace LaVista
     }
 
     unbind_start_drag(target);
-    ctx_storage = memory::make_box<_internal::DragBindCtx>();
+    ctx_storage = make_box<_internal::DragBindCtx>();
     ctx_storage->window = window;
     ctx_storage->sender = target;
 
@@ -247,7 +263,7 @@ namespace LaVista
   static auto update_drag_strip_eval(Window window, const WindowDragStripOptions &opts) -> Result<void>
   {
     const String js = format_drag_strip_eval_assign(opts);
-    return _internal::webview_error_to_result(webview_eval(window->webview, js.c_str()), "webview_eval(drag-strip)");
+    return _internal::webview_error_to_result(webview_eval(window_ptr(window)->webview, js.c_str()), "webview_eval(drag-strip)");
   }
 
   /**
@@ -256,17 +272,17 @@ namespace LaVista
    */
   static auto apply_titlebar_drag_strip_after_load(Window window, const WindowDragStripOptions &opts) -> Result<void>
   {
-    if (window == nullptr || window->titlebar_webview == nullptr)
+    if (window == nullptr || window_ptr(window)->titlebar_webview == nullptr)
     {
       return fail("Title bar is not active");
     }
 
     if (!drag_strip_region_valid(opts))
     {
-      if (window->titlebar_drag_strip_js_installed)
+      if (window_ptr(window)->titlebar_drag_strip_js_installed)
       {
         return _internal::webview_error_to_result(
-            webview_eval(window->titlebar_webview, "if(window.__lavistaDragStrip){"
+            webview_eval(window_ptr(window)->titlebar_webview, "if(window.__lavistaDragStrip){"
                                                    "window.__lavistaDragStrip.sx=0;window.__lavistaDragStrip.sy=0;"
                                                    "window.__lavistaDragStrip.ex=0;window.__lavistaDragStrip.ey=0;}"),
             "webview_eval(titlebar drag-strip-disable)");
@@ -274,25 +290,25 @@ namespace LaVista
       return {};
     }
 
-    return configure_movable_drag_strip(window, window->titlebar_webview, opts,
-                                        &window->titlebar_drag_strip_js_installed, window->titlebar_drag_bind_ctx);
+    return configure_movable_drag_strip(window, window_ptr(window)->titlebar_webview, opts,
+                                        &window_ptr(window)->titlebar_drag_strip_js_installed, window_ptr(window)->titlebar_drag_bind_ctx);
   }
 
   static auto apply_window_drag_strip(Window window, const WindowDragStripOptions &opts) -> Result<void>
   {
-    if (window == nullptr || window->webview == nullptr)
+    if (window == nullptr || window_ptr(window)->webview == nullptr)
     {
       return fail("Window is null");
     }
 
-    window->drag_strip = opts;
+    window_ptr(window)->drag_strip = opts;
 
     if (!drag_strip_region_valid(opts))
     {
-      if (window->content_drag_strip_js_installed)
+      if (window_ptr(window)->content_drag_strip_js_installed)
       {
         return _internal::webview_error_to_result(
-            webview_eval(window->webview, "if(window.__lavistaDragStrip){"
+            webview_eval(window_ptr(window)->webview, "if(window.__lavistaDragStrip){"
                                           "window.__lavistaDragStrip.sx=0;window.__lavistaDragStrip.sy=0;"
                                           "window.__lavistaDragStrip.ex=0;window.__lavistaDragStrip.ey=0;}"),
             "webview_eval(drag-strip-disable)");
@@ -300,10 +316,10 @@ namespace LaVista
       return {};
     }
 
-    if (!window->content_drag_strip_js_installed)
+    if (!window_ptr(window)->content_drag_strip_js_installed)
     {
-      return configure_movable_drag_strip(window, window->webview, opts, &window->content_drag_strip_js_installed,
-                                          window->content_drag_bind_ctx);
+      return configure_movable_drag_strip(window, window_ptr(window)->webview, opts, &window_ptr(window)->content_drag_strip_js_installed,
+                                          window_ptr(window)->content_drag_bind_ctx);
     }
 
     return update_drag_strip_eval(window, opts);
@@ -316,17 +332,17 @@ namespace LaVista
       return fail("Window is null");
     }
 
-    if (window->chrome_bind_ctx != nullptr && window->chrome_bind_ctx->sender != nullptr &&
-        window->chrome_bind_ctx->sender != sender)
+    if (window_ptr(window)->chrome_bind_ctx && window_ptr(window)->chrome_bind_ctx->sender != nullptr &&
+        window_ptr(window)->chrome_bind_ctx->sender != sender)
     {
-      unbind_chrome(window->chrome_bind_ctx->sender);
+      unbind_chrome(window_ptr(window)->chrome_bind_ctx->sender);
     }
 
-    window->chrome_bind_ctx = memory::make_box<_internal::ChromeBindCtx>();
-    window->chrome_bind_ctx->window = window;
-    window->chrome_bind_ctx->sender = sender;
+    window_ptr(window)->chrome_bind_ctx = make_box<_internal::ChromeBindCtx>();
+    window_ptr(window)->chrome_bind_ctx->window = window;
+    window_ptr(window)->chrome_bind_ctx->sender = sender;
 
-    _internal::ChromeBindCtx *ctx = window->chrome_bind_ctx.get();
+    _internal::ChromeBindCtx *ctx = window_ptr(window)->chrome_bind_ctx.get();
 
     auto minimize_bind =
         _internal::webview_error_to_result(webview_bind(
@@ -356,9 +372,9 @@ namespace LaVista
                                                               (void) req;
                                                               auto *c = static_cast<_internal::ChromeBindCtx *>(arg);
                                                               if (c != nullptr && c->window != nullptr &&
-                                                                  c->window->menu_button_callback_bound)
+                                                                  window_ptr(c->window)->menu_button_callback_bound)
                                                               {
-                                                                c->window->menu_button_callback();
+                                                                window_ptr(c->window)->menu_button_callback();
                                                               }
                                                               if (c != nullptr && c->sender != nullptr && id != nullptr)
                                                               {
@@ -446,33 +462,33 @@ namespace LaVista
       return fail("Window is null");
     }
 
-    window->titlebar_html = html;
+    window_ptr(window)->titlebar_html = html;
 
     if (html.empty())
     {
-      if (window->titlebar_webview != nullptr)
+      if (window_ptr(window)->titlebar_webview != nullptr)
       {
-        unbind_chrome(window->titlebar_webview);
-        unbind_start_drag(window->titlebar_webview);
-        window->titlebar_drag_bind_ctx.reset();
-        window->titlebar_drag_strip_js_installed = false;
+        unbind_chrome(window_ptr(window)->titlebar_webview);
+        unbind_start_drag(window_ptr(window)->titlebar_webview);
+        window_ptr(window)->titlebar_drag_bind_ctx.reset();
+        window_ptr(window)->titlebar_drag_strip_js_installed = false;
         auto tb = _internal::platform_destroy_titlebar_webview(window);
         if (tb.is_err())
         {
           return fail(std::move(tb.unwrap_err()));
         }
       }
-      window->titlebar_height_px = 0;
-      window->titlebar_html.clear();
-      auto chrome_on_main = install_window_chrome_bindings(window, window->webview);
+      window_ptr(window)->titlebar_height_px = 0;
+      window_ptr(window)->titlebar_html.clear();
+      auto chrome_on_main = install_window_chrome_bindings(window, window_ptr(window)->webview);
       if (chrome_on_main.is_err())
       {
         return fail(std::move(chrome_on_main.unwrap_err()));
       }
-      if (window->drag_strip_backup_valid)
+      if (window_ptr(window)->drag_strip_backup_valid)
       {
-        auto strip_restore = apply_window_drag_strip(window, window->drag_strip_backup);
-        window->drag_strip_backup_valid = false;
+        auto strip_restore = apply_window_drag_strip(window, window_ptr(window)->drag_strip_backup);
+        window_ptr(window)->drag_strip_backup_valid = false;
         if (strip_restore.is_err())
         {
           return fail(std::move(strip_restore.unwrap_err()));
@@ -484,9 +500,9 @@ namespace LaVista
 
     const bool drag_strip_enabled = height_px > 0;
     const i32 layout_px = drag_strip_enabled ? height_px : 40;
-    window->titlebar_height_px = layout_px;
+    window_ptr(window)->titlebar_height_px = layout_px;
 
-    const bool created_now = window->titlebar_webview == nullptr;
+    const bool created_now = window_ptr(window)->titlebar_webview == nullptr;
     if (created_now)
     {
       auto mk = _internal::platform_create_titlebar_webview(window);
@@ -494,23 +510,23 @@ namespace LaVista
       {
         return fail(std::move(mk.unwrap_err()));
       }
-      auto chrome_move = install_window_chrome_bindings(window, window->titlebar_webview);
+      auto chrome_move = install_window_chrome_bindings(window, window_ptr(window)->titlebar_webview);
       if (chrome_move.is_err())
       {
         [[maybe_unused]] auto const destroyed = _internal::platform_destroy_titlebar_webview(window);
-        (void) install_window_chrome_bindings(window, window->webview);
+        (void) install_window_chrome_bindings(window, window_ptr(window)->webview);
         return fail(std::move(chrome_move.unwrap_err()));
       }
     }
 
     const String doc = wrap_titlebar_html_body(html);
-    auto nav = _internal::load_inline_html_into_webview(window, window->titlebar_webview, doc);
+    auto nav = _internal::load_inline_html_into_webview(window, window_ptr(window)->titlebar_webview, doc);
     if (nav.is_err())
     {
       if (created_now)
       {
         [[maybe_unused]] auto const destroyed = _internal::platform_destroy_titlebar_webview(window);
-        (void) install_window_chrome_bindings(window, window->webview);
+        (void) install_window_chrome_bindings(window, window_ptr(window)->webview);
       }
       return fail(std::move(nav.unwrap_err()));
     }
@@ -545,8 +561,8 @@ namespace LaVista
        only the title bar moves the window (updates that only change HTML skip this). */
     if (created_now)
     {
-      window->drag_strip_backup = window->drag_strip;
-      window->drag_strip_backup_valid = true;
+      window_ptr(window)->drag_strip_backup = window_ptr(window)->drag_strip;
+      window_ptr(window)->drag_strip_backup_valid = true;
       WindowDragStripOptions off{};
       off.start_x_percentage = 0.f;
       off.end_x_percentage = 0.f;
@@ -606,7 +622,7 @@ namespace LaVista
       }
     }
 
-    auto state = memory::make_box<Window_T>();
+    auto state = make_box<Window_T>();
     state->title = title;
     state->width = width;
     state->height = height;
@@ -633,13 +649,13 @@ namespace LaVista
       auto post_result = _internal::platform_apply_post_webview_setup(*state, width, height);
       if (post_result.is_err())
       {
-        Window w = state.leak();
+        Window w = static_cast<Window>(state.release());
         (void) destroy_window(w);
         return fail(std::move(post_result.unwrap_err()));
       }
     }
 
-    Window window = state.leak();
+    Window window = static_cast<Window>(state.release());
 
     const filesystem::Path bundle_path(spa_bundle_path.c_str());
     filesystem::Path index_html = bundle_path;
@@ -662,12 +678,12 @@ namespace LaVista
     if (!entry_exists)
     {
       (void) destroy_window(window);
-      return fail("SPA entry file does not exist: %s", index_html.string().c_str());
+      return fail("SPA entry file does not exist: {}", index_html.string());
     }
 
     AU_TRY_VAR(bundle_dir_abs, filesystem::absolute(bundle_dir));
 
-    auto spa_result = _internal::load_spa_bundle_into_webview(window, window->webview, index_html, bundle_dir_abs);
+    auto spa_result = _internal::load_spa_bundle_into_webview(window, window_ptr(window)->webview, index_html, bundle_dir_abs);
     if (spa_result.is_err())
     {
       (void) destroy_window(window);
@@ -675,7 +691,7 @@ namespace LaVista
     }
 
     {
-      auto chrome = install_window_chrome_bindings(window, window->webview);
+      auto chrome = install_window_chrome_bindings(window, window_ptr(window)->webview);
       if (chrome.is_err())
       {
         (void) destroy_window(window);
@@ -719,72 +735,72 @@ namespace LaVista
       return fail("Window is null");
     }
 
-    for (const auto &binding : window->binding_contexts)
+    for (const auto &binding : window_ptr(window)->binding_contexts)
     {
-      webview_unbind(window->webview, binding.first.c_str());
+      webview_unbind(window_ptr(window)->webview, binding.first.c_str());
     }
-    window->binding_contexts.clear();
-    window->callbacks.clear();
+    window_ptr(window)->binding_contexts.clear();
+    window_ptr(window)->callbacks.clear();
 
-    for (const auto &binding : window->json_binding_contexts)
+    for (const auto &binding : window_ptr(window)->json_binding_contexts)
     {
-      webview_unbind(window->webview, binding.first.c_str());
+      webview_unbind(window_ptr(window)->webview, binding.first.c_str());
     }
-    window->json_binding_contexts.clear();
-    window->json_binding_handlers.clear();
+    window_ptr(window)->json_binding_contexts.clear();
+    window_ptr(window)->json_binding_handlers.clear();
 
-    if (window->chrome_bind_ctx != nullptr && window->chrome_bind_ctx->sender != nullptr)
+    if (window_ptr(window)->chrome_bind_ctx && window_ptr(window)->chrome_bind_ctx->sender != nullptr)
     {
-      unbind_chrome(window->chrome_bind_ctx->sender);
+      unbind_chrome(window_ptr(window)->chrome_bind_ctx->sender);
     }
-    window->chrome_bind_ctx.reset();
+    window_ptr(window)->chrome_bind_ctx.reset();
 
-    unbind_start_drag(window->webview);
-    if (window->titlebar_webview != nullptr)
+    unbind_start_drag(window_ptr(window)->webview);
+    if (window_ptr(window)->titlebar_webview != nullptr)
     {
-      unbind_start_drag(window->titlebar_webview);
+      unbind_start_drag(window_ptr(window)->titlebar_webview);
     }
 
-    if (window->titlebar_webview != nullptr)
+    if (window_ptr(window)->titlebar_webview != nullptr)
     {
       auto tb_destroy = _internal::platform_destroy_titlebar_webview(window);
       if (tb_destroy.is_err())
       {
-        (void) _internal::webview_error_to_result(webview_destroy(window->webview), "webview_destroy");
-        window->webview = nullptr;
-        window->running = false;
+        (void) _internal::webview_error_to_result(webview_destroy(window_ptr(window)->webview), "webview_destroy");
+        window_ptr(window)->webview = nullptr;
+        window_ptr(window)->running = false;
         _internal::platform_destroy_native(window);
 
-        for (const auto &temp_file : window->temp_files)
+        for (const auto &temp_file : window_ptr(window)->temp_files)
         {
           std::error_code ec;
           filesystem::fs::remove(temp_file, ec);
         }
 
-        delete window;
+        delete window_ptr(window);
         return fail(std::move(tb_destroy.unwrap_err()));
       }
     }
 
-    auto destroy_result = _internal::webview_error_to_result(webview_destroy(window->webview), "webview_destroy");
-    window->webview = nullptr;
-    window->running = false;
+    auto destroy_result = _internal::webview_error_to_result(webview_destroy(window_ptr(window)->webview), "webview_destroy");
+    window_ptr(window)->webview = nullptr;
+    window_ptr(window)->running = false;
 
     _internal::platform_destroy_native(window);
 
-    for (const auto &temp_file : window->temp_files)
+    for (const auto &temp_file : window_ptr(window)->temp_files)
     {
       std::error_code ec;
       filesystem::fs::remove(temp_file, ec);
     }
 
-    delete window;
+    delete window_ptr(window);
     return destroy_result;
   }
 
   auto update_window(Window window) -> bool
   {
-    if (window == nullptr || !window->running || window->webview == nullptr)
+    if (window == nullptr || !window_ptr(window)->running || window_ptr(window)->webview == nullptr)
     {
       return false;
     }
@@ -796,7 +812,7 @@ namespace LaVista
 
     _internal::platform_sync_window_frame_from_native(window);
 
-    return window->running;
+    return window_ptr(window)->running;
   }
 
   auto get_window_size(Window window) -> Result<Pair<i32, i32>>
@@ -807,7 +823,7 @@ namespace LaVista
     }
 
     _internal::platform_sync_window_frame_from_native(window);
-    return Pair<i32, i32>{window->width, window->height};
+    return Pair<i32, i32>{window_ptr(window)->width, window_ptr(window)->height};
   }
 
   auto get_window_position(Window window) -> Result<Pair<i32, i32>>
@@ -818,7 +834,7 @@ namespace LaVista
     }
 
     _internal::platform_sync_window_frame_from_native(window);
-    return Pair<i32, i32>(window->x, window->y);
+    return Pair<i32, i32>(window_ptr(window)->x, window_ptr(window)->y);
   }
 
   auto get_window_title(Window window) -> Result<String>
@@ -827,7 +843,7 @@ namespace LaVista
     {
       return fail("Window is null");
     }
-    return window->title;
+    return window_ptr(window)->title;
   }
 
   auto set_window_title(Window window, const String &title) -> Result<void>
@@ -837,12 +853,12 @@ namespace LaVista
       return fail("Window is null");
     }
     auto set_title_result =
-        _internal::webview_error_to_result(webview_set_title(window->webview, title.c_str()), "webview_set_title");
+        _internal::webview_error_to_result(webview_set_title(window_ptr(window)->webview, title.c_str()), "webview_set_title");
     if (set_title_result.is_err())
     {
       return fail(std::move(set_title_result.unwrap_err()));
     }
-    window->title = title;
+    window_ptr(window)->title = title;
     return {};
   }
 
@@ -862,8 +878,8 @@ namespace LaVista
     {
       return fail(std::move(r.unwrap_err()));
     }
-    window->width = width;
-    window->height = height;
+    window_ptr(window)->width = width;
+    window_ptr(window)->height = height;
     return {};
   }
 
@@ -879,8 +895,8 @@ namespace LaVista
     {
       return fail(std::move(r.unwrap_err()));
     }
-    window->x = x;
-    window->y = y;
+    window_ptr(window)->x = x;
+    window_ptr(window)->y = y;
     return {};
   }
 
@@ -889,7 +905,7 @@ namespace LaVista
     return apply_window_drag_strip(window, drag_strip_options);
   }
 
-  auto bind_window_event(Window window, const String &event, const Function<void, const String &> &callback)
+  auto bind_window_event(Window window, const String &event, const std::function<void(const String &)> &callback)
       -> Result<void>
   {
     if (window == nullptr)
@@ -902,25 +918,25 @@ namespace LaVista
     }
 
     const String event_key(event.c_str());
-    if (window->json_binding_handlers.find(event_key) != nullptr)
+    if (window_ptr(window)->json_binding_handlers.find(event_key) != nullptr)
     {
       return fail("Name is already bound as a window function; unbind it first");
     }
 
-    window->callbacks[event_key] = callback;
+    window_ptr(window)->callbacks[event_key] = callback;
 
-    auto binding_ctx = memory::make_box<BindingContext_T>();
+    auto binding_ctx = make_box<BindingContext_T>();
     binding_ctx->window = window;
     binding_ctx->event = event_key;
 
     auto bind_result = _internal::webview_error_to_result(
-        webview_bind(window->webview, event.c_str(), binding_thunk, binding_ctx.get()), "webview_bind");
+        webview_bind(window_ptr(window)->webview, event.c_str(), binding_thunk, binding_ctx.get()), "webview_bind");
     if (bind_result.is_err())
     {
       return fail(std::move(bind_result.unwrap_err()));
     }
 
-    window->binding_contexts.insert(event_key, std::move(binding_ctx));
+    window_ptr(window)->binding_contexts.insert(event_key, std::move(binding_ctx));
     return {};
   }
 
@@ -936,17 +952,17 @@ namespace LaVista
     }
 
     auto unbind_result =
-        _internal::webview_error_to_result(webview_unbind(window->webview, event.c_str()), "webview_unbind");
+        _internal::webview_error_to_result(webview_unbind(window_ptr(window)->webview, event.c_str()), "webview_unbind");
     if (unbind_result.is_err())
     {
       return fail(std::move(unbind_result.unwrap_err()));
     }
-    window->callbacks.erase(event);
-    window->binding_contexts.erase(event);
+    window_ptr(window)->callbacks.erase(event);
+    window_ptr(window)->binding_contexts.erase(event);
     return {};
   }
 
-  auto bind_window_function(Window window, const String &name, const Function<String, const String &> &handler)
+  auto bind_window_function(Window window, const String &name, const std::function<String(const String &)> &handler)
       -> Result<void>
   {
     if (window == nullptr)
@@ -959,32 +975,32 @@ namespace LaVista
     }
 
     const String name_key(name.c_str());
-    if (window->callbacks.find(name_key) != nullptr)
+    if (window_ptr(window)->callbacks.find(name_key) != nullptr)
     {
       return fail("Name is already bound as a window event; unbind it first");
     }
 
-    window->json_binding_handlers[name_key] = handler;
+    window_ptr(window)->json_binding_handlers[name_key] = handler;
 
-    if (window->json_binding_contexts.find(name_key) != nullptr)
+    if (window_ptr(window)->json_binding_contexts.find(name_key) != nullptr)
     {
       return {};
     }
 
-    auto binding_ctx = memory::make_box<JsonBindingContext_T>();
+    auto binding_ctx = make_box<JsonBindingContext_T>();
     binding_ctx->window = window;
     binding_ctx->name = name_key;
 
     auto bind_result = _internal::webview_error_to_result(
-        webview_bind(window->webview, name.c_str(), json_binding_thunk, binding_ctx.get()),
+        webview_bind(window_ptr(window)->webview, name.c_str(), json_binding_thunk, binding_ctx.get()),
         "webview_bind(window function)");
     if (bind_result.is_err())
     {
-      window->json_binding_handlers.erase(name_key);
+      window_ptr(window)->json_binding_handlers.erase(name_key);
       return fail(std::move(bind_result.unwrap_err()));
     }
 
-    window->json_binding_contexts.insert(name_key, std::move(binding_ctx));
+    window_ptr(window)->json_binding_contexts.insert(name_key, std::move(binding_ctx));
     return {};
   }
 
@@ -1000,31 +1016,31 @@ namespace LaVista
     }
 
     const String name_key(name.c_str());
-    if (window->json_binding_contexts.find(name_key) == nullptr)
+    if (window_ptr(window)->json_binding_contexts.find(name_key) == nullptr)
     {
       return fail("Function is not bound");
     }
 
     auto unbind_result =
-        _internal::webview_error_to_result(webview_unbind(window->webview, name.c_str()), "webview_unbind");
+        _internal::webview_error_to_result(webview_unbind(window_ptr(window)->webview, name.c_str()), "webview_unbind");
     if (unbind_result.is_err())
     {
       return fail(std::move(unbind_result.unwrap_err()));
     }
-    window->json_binding_handlers.erase(name_key);
-    window->json_binding_contexts.erase(name_key);
+    window_ptr(window)->json_binding_handlers.erase(name_key);
+    window_ptr(window)->json_binding_contexts.erase(name_key);
     return {};
   }
 
-  auto bind_window_menu_button(Window window, const Function<void> &callback) -> Result<void>
+  auto bind_window_menu_button(Window window, const std::function<void()> &callback) -> Result<void>
   {
     if (window == nullptr)
     {
       return fail("Window is null");
     }
 
-    window->menu_button_callback = callback;
-    window->menu_button_callback_bound = true;
+    window_ptr(window)->menu_button_callback = callback;
+    window_ptr(window)->menu_button_callback_bound = true;
     return {};
   }
 
@@ -1035,7 +1051,7 @@ namespace LaVista
       return fail("Window is null");
     }
 
-    window->menu_button_callback_bound = false;
+    window_ptr(window)->menu_button_callback_bound = false;
     return {};
   }
 
@@ -1063,7 +1079,7 @@ namespace LaVista
     js += ";window.dispatchEvent(new CustomEvent(__lvName,{detail:__lvDetail}));"
           "})();";
 
-    return _internal::webview_error_to_result(webview_eval(window->webview, js.c_str()),
+    return _internal::webview_error_to_result(webview_eval(window_ptr(window)->webview, js.c_str()),
                                               "webview_eval(dispatch event)");
   }
 

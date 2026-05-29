@@ -7,7 +7,15 @@
 // A copy of this license is included in the LICENSE file at the root of this project,
 // and is also available at <https://polyformproject.org/licenses/noncommercial/1.0.0>.
 
-#include <LaVista/LaVista.hpp>
+#include <auxid/macros.hpp>
+
+#include <utility>
+
+import lavista;
+
+#if defined(_WIN32)
+#  include <windows.h>
+#endif
 
 using namespace au;
 
@@ -41,7 +49,7 @@ auto app_main(int argc, char *argv[]) -> int
   const auto result = run_app();
   if (result.is_err())
   {
-    logger.error("Application failed to run with error: %s", result.unwrap_err().c_str());
+    logger.error("Application failed to run with error: {}", result.unwrap_err());
     return 1;
   }
   return 0;

@@ -7,10 +7,12 @@
 // A copy of this license is included in the LICENSE file at the root of this project,
 // and is also available at <https://polyformproject.org/licenses/noncommercial/1.0.0>.
 
-#include <LaVista_internal.hpp>
+module;
 
 #include <algorithm>
 #include <windows.h>
+
+module lavista.internal;
 
 namespace LaVista::_internal
 {

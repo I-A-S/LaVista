@@ -7,12 +7,9 @@
 // A copy of this license is included in the LICENSE file at the root of this project,
 // and is also available at <https://polyformproject.org/licenses/noncommercial/1.0.0>.
 
-#pragma once
+module;
 
-#include <LaVista/LaVista.hpp>
-
-#include <auxid/containers/hash_map.hpp>
-#include <auxid/memory/box.hpp>
+#include <functional>
 
 #define WEBVIEW_HEADER
 #include <webview/webview.h>
@@ -20,8 +17,15 @@
 
 #include <LaVista_platform_context.hpp>
 
-namespace LaVista
+export module lavista.internal;
+
+import auxid;
+import lavista.definitions;
+
+export namespace LaVista
 {
+  using namespace au;
+
   namespace _internal
   {
     struct DragBindCtx
@@ -66,30 +70,43 @@ namespace LaVista
     i32 titlebar_height_px = 0;
     String titlebar_html{};
     bool running = true;
-    HashMap<String, Function<void, const String &>> callbacks;
-    Function<void> menu_button_callback;
+    HashMap<String, std::function<void(const String &)>> callbacks;
+    std::function<void()> menu_button_callback;
     bool menu_button_callback_bound = false;
-    HashMap<String, memory::Box<BindingContext_T>> binding_contexts;
-    HashMap<String, Function<String, const String &>> json_binding_handlers;
-    HashMap<String, memory::Box<JsonBindingContext_T>> json_binding_contexts;
+    HashMap<String, Box<BindingContext_T>> binding_contexts;
+    HashMap<String, std::function<String(const String &)>> json_binding_handlers;
+    HashMap<String, Box<JsonBindingContext_T>> json_binding_contexts;
     HashMap<String, Vec<u8>> pending_binary_buffers;
     u64 next_binary_buffer_id = 0;
-    memory::Box<_internal::DragBindCtx> content_drag_bind_ctx{nullptr};
-    memory::Box<_internal::DragBindCtx> titlebar_drag_bind_ctx{nullptr};
-    memory::Box<_internal::ChromeBindCtx> chrome_bind_ctx{nullptr};
+    Box<_internal::DragBindCtx> content_drag_bind_ctx{nullptr};
+    Box<_internal::DragBindCtx> titlebar_drag_bind_ctx{nullptr};
+    Box<_internal::ChromeBindCtx> chrome_bind_ctx{nullptr};
     PlatformWindowContext platform{};
     Vec<filesystem::Path> temp_files;
   };
 
+  [[nodiscard]] inline auto window_ptr(Window handle) noexcept -> Window_T *
+  {
+    return static_cast<Window_T *>(handle);
+  }
+
   namespace _internal
   {
+    inline constexpr wchar_t SPA_VIRTUAL_HOST_NAME_W[] = L"lavista.bundle.invalid";
+    inline constexpr char SPA_VIRTUAL_HOST_NAME[] = "lavista.bundle.invalid";
+
+    auto ensure_gtk_initialized() -> Result<void>;
+
+    auto apply_webview2_default_background(webview_t w) -> void;
+    auto map_webview2_spa_virtual_host(webview_t w, const filesystem::Path &bundle_dir_abs) -> Result<void>;
+
     inline auto webview_error_to_result(webview_error_t err, const char *context) -> Result<void>
     {
       if (WEBVIEW_SUCCEEDED(err))
       {
         return {};
       }
-      return fail("%s failed with webview error code %d", context, static_cast<int>(err));
+      return fail("{} failed with webview error code {}", context, static_cast<int>(err));
     }
 
     auto platform_get_displays() -> Result<Vec<DisplayInfo>>;
@@ -101,7 +118,6 @@ namespace LaVista
 
     auto platform_destroy_native(Window window) -> void;
 
-    /* Returns false when the native window is no longer valid. */
     auto platform_pump_events(Window window) -> bool;
 
     auto platform_sync_window_frame_from_native(Window window) -> void;

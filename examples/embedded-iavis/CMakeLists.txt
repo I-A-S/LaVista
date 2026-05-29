@@ -9,9 +9,10 @@ endif()
 target_link_libraries(EmbeddedIAVis PRIVATE
   IAVis
   LaVista
-  auxid_platform_standard
   glm::glm
 )
+
+set_target_properties(EmbeddedIAVis PROPERTIES CXX_SCAN_FOR_MODULES ON)
 
 if(MSVC)
   target_link_options(EmbeddedIAVis PRIVATE /FORCE:MULTIPLE)

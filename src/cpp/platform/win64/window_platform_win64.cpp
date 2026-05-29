@@ -7,11 +7,12 @@
 // A copy of this license is included in the LICENSE file at the root of this project,
 // and is also available at <https://polyformproject.org/licenses/noncommercial/1.0.0>.
 
-#include <LaVista_internal.hpp>
-#include <LaVista_webview2.hpp>
+module;
 
 #include <windows.h>
 #include <windowsx.h>
+
+#include <cstring>
 
 #include <objbase.h>
 
@@ -22,6 +23,14 @@
 #endif
 
 #include <WebView2.h>
+
+#define WEBVIEW_HEADER
+#include <webview/webview.h>
+#undef WEBVIEW_HEADER
+
+#include <utility>
+
+module lavista.internal;
 
 namespace LaVista::_internal
 {
@@ -135,7 +144,7 @@ namespace LaVista::_internal
       wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
       wc.hbrBackground = reinterpret_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
       wc.lpfnWndProc = +[](HWND hwnd, UINT msg, WPARAM w_param, LPARAM l_param) -> LRESULT {
-        auto *const state = reinterpret_cast<Window>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+        Window state = reinterpret_cast<Window>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
         switch (msg)
         {
         case WM_NCHITTEST: {
@@ -166,8 +175,8 @@ namespace LaVista::_internal
             RECT r{};
             if (GetWindowRect(hwnd, &r))
             {
-              state->x = static_cast<i32>(r.left);
-              state->y = static_cast<i32>(r.top);
+              window_ptr(state)->x = static_cast<i32>(r.left);
+              window_ptr(state)->y = static_cast<i32>(r.top);
             }
           }
           return DefWindowProcW(hwnd, msg, w_param, l_param);
@@ -179,7 +188,7 @@ namespace LaVista::_internal
         case WM_DESTROY: {
           if (state != nullptr)
           {
-            state->running = false;
+            window_ptr(state)->running = false;
           }
           return 0;
         }
@@ -311,32 +320,32 @@ namespace LaVista::_internal
 
   auto platform_destroy_native(Window window) -> void
   {
-    if (window->platform.hwnd != nullptr && IsWindow(window->platform.hwnd))
+    if (window_ptr(window)->platform.hwnd != nullptr && IsWindow(window_ptr(window)->platform.hwnd))
     {
-      HWND const hwnd = window->platform.hwnd;
-      if (window->platform.icon_small != nullptr || window->platform.icon_big != nullptr)
+      HWND const hwnd = window_ptr(window)->platform.hwnd;
+      if (window_ptr(window)->platform.icon_small != nullptr || window_ptr(window)->platform.icon_big != nullptr)
       {
         (void) SendMessageW(hwnd, WM_SETICON, ICON_SMALL, 0);
         (void) SendMessageW(hwnd, WM_SETICON, ICON_BIG, 0);
       }
       DestroyWindow(hwnd);
     }
-    if (window->platform.icon_big != nullptr)
+    if (window_ptr(window)->platform.icon_big != nullptr)
     {
-      DestroyIcon(window->platform.icon_big);
-      window->platform.icon_big = nullptr;
+      DestroyIcon(window_ptr(window)->platform.icon_big);
+      window_ptr(window)->platform.icon_big = nullptr;
     }
-    if (window->platform.icon_small != nullptr)
+    if (window_ptr(window)->platform.icon_small != nullptr)
     {
-      DestroyIcon(window->platform.icon_small);
-      window->platform.icon_small = nullptr;
+      DestroyIcon(window_ptr(window)->platform.icon_small);
+      window_ptr(window)->platform.icon_small = nullptr;
     }
-    window->platform.hwnd = nullptr;
+    window_ptr(window)->platform.hwnd = nullptr;
   }
 
   auto platform_pump_events(Window window) -> bool
   {
-    if (window->platform.hwnd == nullptr || !IsWindow(window->platform.hwnd))
+    if (window_ptr(window)->platform.hwnd == nullptr || !IsWindow(window_ptr(window)->platform.hwnd))
     {
       return false;
     }
@@ -348,39 +357,39 @@ namespace LaVista::_internal
       DispatchMessageW(&msg);
     }
 
-    return window->platform.hwnd != nullptr && IsWindow(window->platform.hwnd);
+    return window_ptr(window)->platform.hwnd != nullptr && IsWindow(window_ptr(window)->platform.hwnd);
   }
 
   auto platform_sync_window_frame_from_native(Window window) -> void
   {
-    if (window->platform.hwnd != nullptr && IsWindow(window->platform.hwnd))
+    if (window_ptr(window)->platform.hwnd != nullptr && IsWindow(window_ptr(window)->platform.hwnd))
     {
       RECT r{};
-      if (GetWindowRect(window->platform.hwnd, &r))
+      if (GetWindowRect(window_ptr(window)->platform.hwnd, &r))
       {
-        window->x = static_cast<i32>(r.left);
-        window->y = static_cast<i32>(r.top);
-        window->width = static_cast<i32>(r.right - r.left);
-        window->height = static_cast<i32>(r.bottom - r.top);
+        window_ptr(window)->x = static_cast<i32>(r.left);
+        window_ptr(window)->y = static_cast<i32>(r.top);
+        window_ptr(window)->width = static_cast<i32>(r.right - r.left);
+        window_ptr(window)->height = static_cast<i32>(r.bottom - r.top);
       }
     }
   }
 
   auto platform_set_window_position(Window window, i32 x, i32 y) -> Result<void>
   {
-    if (window->platform.hwnd == nullptr || !IsWindow(window->platform.hwnd))
+    if (window_ptr(window)->platform.hwnd == nullptr || !IsWindow(window_ptr(window)->platform.hwnd))
     {
       return fail("Native window handle is not valid");
     }
 
     RECT r{};
-    if (!GetWindowRect(window->platform.hwnd, &r))
+    if (!GetWindowRect(window_ptr(window)->platform.hwnd, &r))
     {
       return fail("GetWindowRect() failed");
     }
     const int width = r.right - r.left;
     const int height = r.bottom - r.top;
-    if (!SetWindowPos(window->platform.hwnd, nullptr, x, y, width, height, SWP_NOACTIVATE | SWP_NOZORDER))
+    if (!SetWindowPos(window_ptr(window)->platform.hwnd, nullptr, x, y, width, height, SWP_NOACTIVATE | SWP_NOZORDER))
     {
       return fail("SetWindowPos() failed");
     }
@@ -389,12 +398,12 @@ namespace LaVista::_internal
 
   auto platform_set_window_size(Window window, i32 width, i32 height) -> Result<void>
   {
-    if (window->platform.hwnd == nullptr || !IsWindow(window->platform.hwnd))
+    if (window_ptr(window)->platform.hwnd == nullptr || !IsWindow(window_ptr(window)->platform.hwnd))
     {
       return fail("Native window handle is not valid");
     }
     /* Resize the frame once at full dimensions; children are positioned in platform_layout_webviews only. */
-    if (SetWindowPos(window->platform.hwnd, nullptr, 0, 0, static_cast<int>(width), static_cast<int>(height),
+    if (SetWindowPos(window_ptr(window)->platform.hwnd, nullptr, 0, 0, static_cast<int>(width), static_cast<int>(height),
                      SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE) == FALSE)
     {
       return fail("SetWindowPos() failed");
@@ -405,51 +414,51 @@ namespace LaVista::_internal
 
   auto platform_create_titlebar_webview(Window window) -> Result<void>
   {
-    if (window->titlebar_webview != nullptr)
+    if (window_ptr(window)->titlebar_webview != nullptr)
     {
       return {};
     }
-    if (window->platform.hwnd == nullptr || !IsWindow(window->platform.hwnd))
+    if (window_ptr(window)->platform.hwnd == nullptr || !IsWindow(window_ptr(window)->platform.hwnd))
     {
       return fail("Native window handle is not valid");
     }
-    window->titlebar_webview = webview_create(0, window->platform.hwnd);
-    if (window->titlebar_webview == nullptr)
+    window_ptr(window)->titlebar_webview = webview_create(0, window_ptr(window)->platform.hwnd);
+    if (window_ptr(window)->titlebar_webview == nullptr)
     {
       return fail("titlebar webview_create() failed");
     }
-    apply_webview2_default_background(window->titlebar_webview);
+    apply_webview2_default_background(window_ptr(window)->titlebar_webview);
     return {};
   }
 
   auto platform_destroy_titlebar_webview(Window window) -> Result<void>
   {
-    if (window->titlebar_webview == nullptr)
+    if (window_ptr(window)->titlebar_webview == nullptr)
     {
       return {};
     }
-    auto r = webview_error_to_result(webview_destroy(window->titlebar_webview), "webview_destroy(titlebar)");
-    window->titlebar_webview = nullptr;
+    auto r = webview_error_to_result(webview_destroy(window_ptr(window)->titlebar_webview), "webview_destroy(titlebar)");
+    window_ptr(window)->titlebar_webview = nullptr;
     return r;
   }
 
   auto platform_layout_webviews(Window window) -> void
   {
-    if (window->platform.hwnd == nullptr || !IsWindow(window->platform.hwnd))
+    if (window_ptr(window)->platform.hwnd == nullptr || !IsWindow(window_ptr(window)->platform.hwnd))
     {
       return;
     }
     RECT r{};
-    if (!GetClientRect(window->platform.hwnd, &r))
+    if (!GetClientRect(window_ptr(window)->platform.hwnd, &r))
     {
       return;
     }
     const int total_w = r.right - r.left;
     const int total_h = r.bottom - r.top;
     int tb_h = 0;
-    if (window->titlebar_webview != nullptr && window->titlebar_height_px > 0)
+    if (window_ptr(window)->titlebar_webview != nullptr && window_ptr(window)->titlebar_height_px > 0)
     {
-      tb_h = window->titlebar_height_px;
+      tb_h = window_ptr(window)->titlebar_height_px;
     }
     if (tb_h > total_h)
     {
@@ -457,29 +466,29 @@ namespace LaVista::_internal
     }
     const int content_h = total_h - tb_h;
 
-    if (window->titlebar_webview != nullptr && tb_h > 0)
+    if (window_ptr(window)->titlebar_webview != nullptr && tb_h > 0)
     {
       HWND tb_widget =
-          static_cast<HWND>(webview_get_native_handle(window->titlebar_webview, WEBVIEW_NATIVE_HANDLE_KIND_UI_WIDGET));
+          static_cast<HWND>(webview_get_native_handle(window_ptr(window)->titlebar_webview, WEBVIEW_NATIVE_HANDLE_KIND_UI_WIDGET));
       if (tb_widget != nullptr)
       {
         MoveWindow(tb_widget, 0, 0, total_w, tb_h, TRUE);
       }
-      win64_notify_webview_parent_moved(window->titlebar_webview);
+      win64_notify_webview_parent_moved(window_ptr(window)->titlebar_webview);
     }
 
     HWND main_widget =
-        static_cast<HWND>(webview_get_native_handle(window->webview, WEBVIEW_NATIVE_HANDLE_KIND_UI_WIDGET));
+        static_cast<HWND>(webview_get_native_handle(window_ptr(window)->webview, WEBVIEW_NATIVE_HANDLE_KIND_UI_WIDGET));
     if (main_widget != nullptr)
     {
       MoveWindow(main_widget, 0, tb_h, total_w, content_h > 0 ? content_h : 1, TRUE);
     }
-    win64_notify_webview_parent_moved(window->webview);
+    win64_notify_webview_parent_moved(window_ptr(window)->webview);
   }
 
   auto platform_start_window_drag(Window window) -> void
   {
-    if (window->platform.hwnd == nullptr || !IsWindow(window->platform.hwnd))
+    if (window_ptr(window)->platform.hwnd == nullptr || !IsWindow(window_ptr(window)->platform.hwnd))
     {
       return;
     }
@@ -492,46 +501,46 @@ namespace LaVista::_internal
      * WM_NCLBUTTONDOWN's lParam exactly) so the move loop anchors where the user actually clicked. Post rather
      * than Send to avoid re-entering the WebView2 script thread. */
     ReleaseCapture();
-    (void) PostMessageW(window->platform.hwnd, WM_NCLBUTTONDOWN, HTCAPTION, static_cast<LPARAM>(GetMessagePos()));
+    (void) PostMessageW(window_ptr(window)->platform.hwnd, WM_NCLBUTTONDOWN, HTCAPTION, static_cast<LPARAM>(GetMessagePos()));
   }
 
   auto platform_minimize_window(Window window) -> void
   {
-    if (window->platform.hwnd != nullptr && IsWindow(window->platform.hwnd))
+    if (window_ptr(window)->platform.hwnd != nullptr && IsWindow(window_ptr(window)->platform.hwnd))
     {
-      ShowWindow(window->platform.hwnd, SW_MINIMIZE);
+      ShowWindow(window_ptr(window)->platform.hwnd, SW_MINIMIZE);
     }
   }
 
   auto platform_toggle_maximize_window(Window window) -> void
   {
-    if (window->platform.hwnd != nullptr && IsWindow(window->platform.hwnd))
+    if (window_ptr(window)->platform.hwnd != nullptr && IsWindow(window_ptr(window)->platform.hwnd))
     {
-      if (IsZoomed(window->platform.hwnd) != FALSE)
+      if (IsZoomed(window_ptr(window)->platform.hwnd) != FALSE)
       {
-        ShowWindow(window->platform.hwnd, SW_RESTORE);
+        ShowWindow(window_ptr(window)->platform.hwnd, SW_RESTORE);
       }
       else
       {
-        ShowWindow(window->platform.hwnd, SW_MAXIMIZE);
+        ShowWindow(window_ptr(window)->platform.hwnd, SW_MAXIMIZE);
       }
     }
   }
 
   auto platform_window_is_maximized(Window window) -> bool
   {
-    if (window->platform.hwnd == nullptr || !IsWindow(window->platform.hwnd))
+    if (window_ptr(window)->platform.hwnd == nullptr || !IsWindow(window_ptr(window)->platform.hwnd))
     {
       return false;
     }
-    return IsZoomed(window->platform.hwnd) != FALSE;
+    return IsZoomed(window_ptr(window)->platform.hwnd) != FALSE;
   }
 
   auto platform_close_window(Window window) -> void
   {
-    if (window->platform.hwnd != nullptr && IsWindow(window->platform.hwnd))
+    if (window_ptr(window)->platform.hwnd != nullptr && IsWindow(window_ptr(window)->platform.hwnd))
     {
-      PostMessageW(window->platform.hwnd, WM_CLOSE, 0, 0);
+      PostMessageW(window_ptr(window)->platform.hwnd, WM_CLOSE, 0, 0);
     }
   }
 } // namespace LaVista::_internal
@@ -540,12 +549,12 @@ namespace LaVista
 {
   auto post_binary_data(Window window, const Span<const u8> &buffer) -> Result<void>
   {
-    if (window == nullptr || window->webview == nullptr)
+    if (window == nullptr || window_ptr(window)->webview == nullptr)
     {
       return fail("Window or webview is null");
     }
 
-    void *const raw = webview_get_native_handle(window->webview, WEBVIEW_NATIVE_HANDLE_KIND_BROWSER_CONTROLLER);
+    void *const raw = webview_get_native_handle(window_ptr(window)->webview, WEBVIEW_NATIVE_HANDLE_KIND_BROWSER_CONTROLLER);
     if (raw == nullptr)
     {
       return fail("WebView2 controller handle unavailable");

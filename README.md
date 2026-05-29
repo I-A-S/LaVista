@@ -2,16 +2,23 @@
   <img src="logo.png" alt="LaVista" width="190" style="border-radius: 1.15rem;"/>
   <br/>
 
-  <img src="https://img.shields.io/badge/standard-C%2B%2B20-darkgreen.svg" alt="C++20"/>
+  <img src="https://img.shields.io/badge/standard-C%2B%2B23-darkgreen.svg" alt="C++23"/>
   <img src="https://img.shields.io/badge/platform-Win64%20%7C%20Linux-purple.svg" alt="Platform"/>
-  <img src="https://img.shields.io/badge/compiler-MSVC%20%7C%20Clang-darkred.svg" alt="Compiler"/>
+  <img src="https://img.shields.io/badge/compiler-MSVC%20%7C%20Clang%20%7C%20GCC-darkred.svg" alt="Compiler"/>
 
   <p style="padding-top: 0.2rem;">
     <b>LaVista: A modern platform for C++ desktop apps.</b>
   </p>
 </div>
 
-LaVista is a C++20 library designed to host single-page application (SPA) bundles within an **OS-native webview**. It provides robust windowing and display management for **Windows** and **Linux**.
+> [!NOTE]
+> LaVista has been migrated to a module-only API.
+>
+> If you're a current license holder, you should have received an email from IASoft detailing the changes, alongside a full migration guide, a repository link for header-only API security updates and a rationale for this decision.
+>
+> If you have (or previously held) a license to this library but didn't recieve the email, please raise a support ticket through IASoft Client Dashboard!
+
+LaVista is a C++23 library designed to host single-page application (SPA) bundles within an **OS-native webview**. It provides robust windowing and display management for **Windows** and **Linux**.
 
 Under the hood, LaVista is built on [LibAuxid](https://github.com/I-A-S/Auxid) (an Orthodox C++ core), leverages [webview](https://github.com/webview/webview) for the embedded browser, and uses [stb_image](https://github.com/nothings/stb) for window icon decoding. Other platforms currently use a minimal stub for development, but primary support and CI are focused on Windows and Linux x64.
 
@@ -33,13 +40,13 @@ Under the hood, LaVista is built on [LibAuxid](https://github.com/I-A-S/Auxid) (
 - **Seamless Event Binding** - Connect your web layer to C++ using `bind_window_event` and `unbind_window_event` for string-keyed callbacks.
 - **Display Management** - Query connected monitors via `get_displays` and target specific screens using `WindowCreateOptions.display_index`.
 - **Easy SPA Integration** - Serve static assets (e.g., Astro or Vite `dist/` folders) simply by pointing `spa_bundle_path` to your build directory. The client application must use the `liblavista` JavaScript package to handle the host handshake and receive binary data.
-- **CMake** - Exposes a static `LaVista` target with public headers under `include/LaVista/`. Tests and examples (`LaVista_BUILD_EXAMPLES`, `LaVista_BUILD_TESTS`) default to **ON** only when LaVista is the top-level project.
+- **CMake** - Exposes a static `LaVista` target with a C++23 module interface (`import lavista`). Tests and examples (`LaVista_BUILD_EXAMPLES`, `LaVista_BUILD_TESTS`) default to **ON** only when LaVista is the top-level project.
 
 ## Requirements
 
-- **CMake** - Version 3.28+ for the provided [CMake presets](CMakePresets.json), or 3.20+ for manual configuration via the root `CMakeLists.txt`.
+- **CMake** - Version 3.28+ (required for C++ modules and the provided [CMake presets](CMakePresets.json)).
 - **Git** - Must include submodule support (LibAuxid is expected at `libauxid/`).
-- **C++20 Compiler** - MSVC or Clang, matching [LibAuxid](https://github.com/I-A-S/Auxid) and your chosen preset.
+- **C++23 Compiler** - MSVC or Clang, matching [LibAuxid](https://github.com/I-A-S/Auxid) and your chosen preset.
 
 ### Linux (Debian-based)
 
@@ -132,12 +139,17 @@ add_subdirectory(path/to/LaVista)
 
 add_executable(my_app main.cpp)
 target_link_libraries(my_app PRIVATE LaVista)
+set_target_properties(my_app PROPERTIES CXX_SCAN_FOR_MODULES ON)
 ```
 
-Public API: [`include/LaVista/LaVista.hpp`](include/LaVista/LaVista.hpp), namespace `LaVista`.
+Public API: `import lavista;` (re-exports [LibAuxid](https://github.com/I-A-S/Auxid)), namespace `LaVista`. Use `<auxid/macros.hpp>` for `AU_TRY_*` helpers.
 
 ```cpp
-#include <LaVista/LaVista.hpp>
+#include <auxid/macros.hpp>
+
+import lavista;
+
+using namespace au;
 
 LaVista::WindowCreateOptions opts;
 opts.title = "My App";

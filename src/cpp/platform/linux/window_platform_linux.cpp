@@ -7,8 +7,7 @@
 // A copy of this license is included in the LICENSE file at the root of this project,
 // and is also available at <https://polyformproject.org/licenses/noncommercial/1.0.0>.
 
-#include <LaVista_internal.hpp>
-#include <LaVista_gtk_webview.hpp>
+module;
 
 #include <gdk/gdk.h>
 #include <gdk/gdkmemorytexture.h>
@@ -17,6 +16,8 @@
 
 #include <cstring>
 #include <string>
+
+module lavista.internal;
 
 #if defined(GDK_WINDOWING_X11)
 #  include <X11/Xlib.h>
@@ -268,17 +269,17 @@ namespace LaVista::_internal
     {
       return;
     }
-    if (window->platform.titlebar_placeholder != nullptr)
+    if (window_ptr(window)->platform.titlebar_placeholder != nullptr)
     {
-      gtk_window_destroy(window->platform.titlebar_placeholder);
-      window->platform.titlebar_placeholder = nullptr;
+      gtk_window_destroy(window_ptr(window)->platform.titlebar_placeholder);
+      window_ptr(window)->platform.titlebar_placeholder = nullptr;
     }
-    window->platform.content_box = nullptr;
+    window_ptr(window)->platform.content_box = nullptr;
   }
 
   auto platform_pump_events(Window window) -> bool
   {
-    if (window->platform.gtk_window == nullptr)
+    if (window_ptr(window)->platform.gtk_window == nullptr)
     {
       return false;
     }
@@ -292,9 +293,9 @@ namespace LaVista::_internal
 
   auto platform_set_window_position(Window window, i32 x, i32 y) -> Result<void>
   {
-    if (window->platform.gtk_window != nullptr)
+    if (window_ptr(window)->platform.gtk_window != nullptr)
     {
-      linux_gtk_window_move(window->platform.gtk_window, x, y);
+      linux_gtk_window_move(window_ptr(window)->platform.gtk_window, x, y);
       platform_layout_webviews(window);
     }
     return {};
@@ -302,16 +303,16 @@ namespace LaVista::_internal
 
   auto platform_set_window_size(Window window, i32 width, i32 height) -> Result<void>
   {
-    if (window->platform.gtk_window == nullptr)
+    if (window_ptr(window)->platform.gtk_window == nullptr)
     {
       return fail("Native window is null");
     }
     {
       const int w = static_cast<int>(width);
       const int h = static_cast<int>(height);
-      gtk_window_set_default_size(window->platform.gtk_window, w, h);
-      gtk_widget_set_size_request(GTK_WIDGET(window->platform.gtk_window), w, h);
-      gtk_widget_queue_allocate(GTK_WIDGET(window->platform.gtk_window));
+      gtk_window_set_default_size(window_ptr(window)->platform.gtk_window, w, h);
+      gtk_widget_set_size_request(GTK_WIDGET(window_ptr(window)->platform.gtk_window), w, h);
+      gtk_widget_queue_allocate(GTK_WIDGET(window_ptr(window)->platform.gtk_window));
     }
     platform_layout_webviews(window);
     return {};
@@ -319,10 +320,10 @@ namespace LaVista::_internal
 
   auto platform_start_window_drag(Window window) -> void
   {
-    if (window->platform.gtk_window != nullptr)
+    if (window_ptr(window)->platform.gtk_window != nullptr)
     {
-      GdkSurface *surface = gtk_native_get_surface(GTK_NATIVE(window->platform.gtk_window));
-      GdkDisplay *display = gtk_widget_get_display(GTK_WIDGET(window->platform.gtk_window));
+      GdkSurface *surface = gtk_native_get_surface(GTK_NATIVE(window_ptr(window)->platform.gtk_window));
+      GdkDisplay *display = gtk_widget_get_display(GTK_WIDGET(window_ptr(window)->platform.gtk_window));
       GdkSeat *seat = display != nullptr ? gdk_display_get_default_seat(display) : nullptr;
       GdkDevice *pointer = seat != nullptr ? gdk_seat_get_pointer(seat) : nullptr;
       double px = 0.0;
@@ -337,11 +338,11 @@ namespace LaVista::_internal
 
   auto platform_minimize_window(Window window) -> void
   {
-    if (window->platform.gtk_window == nullptr)
+    if (window_ptr(window)->platform.gtk_window == nullptr)
     {
       return;
     }
-    GdkSurface *surface = gtk_native_get_surface(GTK_NATIVE(window->platform.gtk_window));
+    GdkSurface *surface = gtk_native_get_surface(GTK_NATIVE(window_ptr(window)->platform.gtk_window));
     if (surface != nullptr && GDK_IS_TOPLEVEL(surface))
     {
       gdk_toplevel_minimize(GDK_TOPLEVEL(surface));
@@ -350,44 +351,44 @@ namespace LaVista::_internal
 
   auto platform_toggle_maximize_window(Window window) -> void
   {
-    if (window->platform.gtk_window == nullptr)
+    if (window_ptr(window)->platform.gtk_window == nullptr)
     {
       return;
     }
-    if (gtk_window_is_maximized(window->platform.gtk_window))
+    if (gtk_window_is_maximized(window_ptr(window)->platform.gtk_window))
     {
-      gtk_window_unmaximize(window->platform.gtk_window);
+      gtk_window_unmaximize(window_ptr(window)->platform.gtk_window);
     }
     else
     {
-      gtk_window_maximize(window->platform.gtk_window);
+      gtk_window_maximize(window_ptr(window)->platform.gtk_window);
     }
   }
 
   auto platform_window_is_maximized(Window window) -> bool
   {
-    if (window->platform.gtk_window == nullptr)
+    if (window_ptr(window)->platform.gtk_window == nullptr)
     {
       return false;
     }
-    return gtk_window_is_maximized(window->platform.gtk_window) != FALSE;
+    return gtk_window_is_maximized(window_ptr(window)->platform.gtk_window) != FALSE;
   }
 
   auto platform_close_window(Window window) -> void
   {
-    if (window->platform.gtk_window != nullptr)
+    if (window_ptr(window)->platform.gtk_window != nullptr)
     {
-      gtk_window_close(window->platform.gtk_window);
+      gtk_window_close(window_ptr(window)->platform.gtk_window);
     }
   }
 
   auto platform_create_titlebar_webview(Window window) -> Result<void>
   {
-    if (window->titlebar_webview != nullptr)
+    if (window_ptr(window)->titlebar_webview != nullptr)
     {
       return {};
     }
-    if (window->platform.gtk_window == nullptr || window->platform.content_box == nullptr)
+    if (window_ptr(window)->platform.gtk_window == nullptr || window_ptr(window)->platform.content_box == nullptr)
     {
       return fail("Native window is null");
     }
@@ -396,24 +397,24 @@ namespace LaVista::_internal
      * is never mapped (no gtk_widget_set_visible(TRUE) call). After webview_create() installs the webkit widget
      * as this placeholder's child we steal it into `content_box` alongside the main content webview. */
     GtkWidget *const placeholder = gtk_window_new();
-    window->platform.titlebar_placeholder = GTK_WINDOW(placeholder);
+    window_ptr(window)->platform.titlebar_placeholder = GTK_WINDOW(placeholder);
 
-    window->titlebar_webview = webview_create(0, placeholder);
-    if (window->titlebar_webview == nullptr)
+    window_ptr(window)->titlebar_webview = webview_create(0, placeholder);
+    if (window_ptr(window)->titlebar_webview == nullptr)
     {
       gtk_window_destroy(GTK_WINDOW(placeholder));
-      window->platform.titlebar_placeholder = nullptr;
+      window_ptr(window)->platform.titlebar_placeholder = nullptr;
       return fail("titlebar webview_create() failed");
     }
 
     GtkWidget *const tb_widget = static_cast<GtkWidget *>(
-        webview_get_native_handle(window->titlebar_webview, WEBVIEW_NATIVE_HANDLE_KIND_UI_WIDGET));
+        webview_get_native_handle(window_ptr(window)->titlebar_webview, WEBVIEW_NATIVE_HANDLE_KIND_UI_WIDGET));
     if (tb_widget == nullptr)
     {
-      (void) webview_destroy(window->titlebar_webview);
-      window->titlebar_webview = nullptr;
+      (void) webview_destroy(window_ptr(window)->titlebar_webview);
+      window_ptr(window)->titlebar_webview = nullptr;
       gtk_window_destroy(GTK_WINDOW(placeholder));
-      window->platform.titlebar_placeholder = nullptr;
+      window_ptr(window)->platform.titlebar_placeholder = nullptr;
       return fail("titlebar webview UI widget is null");
     }
 
@@ -423,9 +424,9 @@ namespace LaVista::_internal
 
     gtk_widget_set_hexpand(tb_widget, TRUE);
     gtk_widget_set_vexpand(tb_widget, FALSE);
-    const int tb_h = window->titlebar_height_px > 0 ? static_cast<int>(window->titlebar_height_px) : 40;
+    const int tb_h = window_ptr(window)->titlebar_height_px > 0 ? static_cast<int>(window_ptr(window)->titlebar_height_px) : 40;
     gtk_widget_set_size_request(tb_widget, -1, tb_h);
-    gtk_box_prepend(GTK_BOX(window->platform.content_box), tb_widget);
+    gtk_box_prepend(GTK_BOX(window_ptr(window)->platform.content_box), tb_widget);
     g_object_unref(tb_widget);
 
     return {};
@@ -433,7 +434,7 @@ namespace LaVista::_internal
 
   auto platform_destroy_titlebar_webview(Window window) -> Result<void>
   {
-    if (window->titlebar_webview == nullptr)
+    if (window_ptr(window)->titlebar_webview == nullptr)
     {
       return {};
     }
@@ -441,23 +442,23 @@ namespace LaVista::_internal
     /* Remove the widget from our box before webview_destroy() unrefs it, otherwise the box would be left
      * holding a dangling pointer. webview.h's non-owning destructor defensively no-ops its remove_child call
      * when its `m_window` (the placeholder) no longer owns the widget. */
-    if (window->platform.content_box != nullptr)
+    if (window_ptr(window)->platform.content_box != nullptr)
     {
       GtkWidget *const tb_widget = static_cast<GtkWidget *>(
-          webview_get_native_handle(window->titlebar_webview, WEBVIEW_NATIVE_HANDLE_KIND_UI_WIDGET));
+          webview_get_native_handle(window_ptr(window)->titlebar_webview, WEBVIEW_NATIVE_HANDLE_KIND_UI_WIDGET));
       if (tb_widget != nullptr)
       {
-        gtk_box_remove(GTK_BOX(window->platform.content_box), tb_widget);
+        gtk_box_remove(GTK_BOX(window_ptr(window)->platform.content_box), tb_widget);
       }
     }
 
-    auto r = webview_error_to_result(webview_destroy(window->titlebar_webview), "webview_destroy(titlebar)");
-    window->titlebar_webview = nullptr;
+    auto r = webview_error_to_result(webview_destroy(window_ptr(window)->titlebar_webview), "webview_destroy(titlebar)");
+    window_ptr(window)->titlebar_webview = nullptr;
 
-    if (window->platform.titlebar_placeholder != nullptr)
+    if (window_ptr(window)->platform.titlebar_placeholder != nullptr)
     {
-      gtk_window_destroy(window->platform.titlebar_placeholder);
-      window->platform.titlebar_placeholder = nullptr;
+      gtk_window_destroy(window_ptr(window)->platform.titlebar_placeholder);
+      window_ptr(window)->platform.titlebar_placeholder = nullptr;
     }
     return r;
   }
@@ -465,19 +466,19 @@ namespace LaVista::_internal
   auto platform_layout_webviews(Window window) -> void
   {
     /* GtkBox handles vertical stacking and distribution automatically; we only need to keep the titlebar
-     * widget's requested height in sync with window->titlebar_height_px when set_window_titlebar() changes it. */
-    if (window->platform.content_box == nullptr || window->titlebar_webview == nullptr)
+     * widget's requested height in sync with window_ptr(window)->titlebar_height_px when set_window_titlebar() changes it. */
+    if (window_ptr(window)->platform.content_box == nullptr || window_ptr(window)->titlebar_webview == nullptr)
     {
       return;
     }
 
     GtkWidget *const tb_widget = static_cast<GtkWidget *>(
-        webview_get_native_handle(window->titlebar_webview, WEBVIEW_NATIVE_HANDLE_KIND_UI_WIDGET));
+        webview_get_native_handle(window_ptr(window)->titlebar_webview, WEBVIEW_NATIVE_HANDLE_KIND_UI_WIDGET));
     if (tb_widget == nullptr)
     {
       return;
     }
-    const int tb_h = window->titlebar_height_px > 0 ? static_cast<int>(window->titlebar_height_px) : 0;
+    const int tb_h = window_ptr(window)->titlebar_height_px > 0 ? static_cast<int>(window_ptr(window)->titlebar_height_px) : 0;
     gtk_widget_set_size_request(tb_widget, -1, tb_h);
   }
 } // namespace LaVista::_internal
@@ -492,8 +493,8 @@ namespace LaVista
       return fail("Window is null");
     }
 
-    window->next_binary_buffer_id++;
-    String id = std::to_string(window->next_binary_buffer_id).c_str();
+    window_ptr(window)->next_binary_buffer_id++;
+    String id = std::to_string(window_ptr(window)->next_binary_buffer_id).c_str();
     Vec<u8> bytes;
     const usize n = static_cast<usize>(buffer.size());
     bytes.resize(n);
@@ -501,7 +502,7 @@ namespace LaVista
     {
       std::memcpy(bytes.data(), buffer.data(), n);
     }
-    (void) window->pending_binary_buffers.insert(id, std::move(bytes));
+    (void) window_ptr(window)->pending_binary_buffers.insert(id, std::move(bytes));
 
     return dispatch_window_event_text(window, "lavista-bin-ready", id);
   }
